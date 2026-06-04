@@ -17,12 +17,12 @@ function HorizontalPressureVessel({ position = defaultPosition }: HorizontalPres
     <group position={position}>
       <mesh castShadow receiveShadow position={[0, shellCenterY, 0]} rotation={[0, 0, Math.PI / 2]}>
         <capsuleGeometry args={[radius, straightShellLength, 16, 48]} />
-        <meshStandardMaterial color="#cfd6dc" roughness={0.38} metalness={0.42} />
+        <meshStandardMaterial color="#4f8fbd" roughness={0.4} metalness={0.28} />
       </mesh>
 
       <mesh castShadow receiveShadow position={[0, shellCenterY + radius, 0]}>
         <cylinderGeometry args={[0.16, 0.16, 0.55, 24]} />
-        <meshStandardMaterial color="#9aa4ad" roughness={0.5} metalness={0.35} />
+        <meshStandardMaterial color="#2f6f9f" roughness={0.48} metalness={0.28} />
       </mesh>
 
       <mesh castShadow receiveShadow position={[-1.8, saddleHeight / 2, 0]}>

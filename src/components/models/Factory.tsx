@@ -19,6 +19,10 @@ const leftWindowRight = leftWindowX + windowWidth / 2
 const rightWindowLeft = rightWindowX - windowWidth / 2
 const rightWindowRight = rightWindowX + windowWidth / 2
 
+function WallMaterial() {
+  return <meshStandardMaterial color="#c7d0d6" roughness={0.78} transparent opacity={0.5} />
+}
+
 function RectangularGrid() {
   const positions = useMemo(() => {
     const points: number[] = []
@@ -56,30 +60,6 @@ function FactoryFloor() {
       </mesh>
 
       <RectangularGrid />
-      <SafetyLaneLines />
-    </group>
-  )
-}
-
-function SafetyLaneLines() {
-  return (
-    <group position={[0, 0.026, 0]}>
-      <mesh receiveShadow position={[0, 0, 4.7]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[13.6, 0.16]} />
-        <meshStandardMaterial color="#facc15" roughness={0.72} />
-      </mesh>
-      <mesh receiveShadow position={[0, 0, 2.4]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[13.6, 0.16]} />
-        <meshStandardMaterial color="#facc15" roughness={0.72} />
-      </mesh>
-      <mesh receiveShadow position={[-6.8, 0, 3.55]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[0.16, 2.3]} />
-        <meshStandardMaterial color="#facc15" roughness={0.72} />
-      </mesh>
-      <mesh receiveShadow position={[6.8, 0, 3.55]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[0.16, 2.3]} />
-        <meshStandardMaterial color="#facc15" roughness={0.72} />
-      </mesh>
     </group>
   )
 }
@@ -90,11 +70,11 @@ function FactoryShell() {
       <BackWall />
       <mesh receiveShadow position={[-halfFloorWidth, wallHeight / 2, 0]}>
         <boxGeometry args={[wallThickness, wallHeight, floorDepth]} />
-        <meshStandardMaterial color="#d3dade" roughness={0.78} />
+        <WallMaterial />
       </mesh>
       <mesh receiveShadow position={[halfFloorWidth, wallHeight / 2, 0]}>
         <boxGeometry args={[wallThickness, wallHeight, floorDepth]} />
-        <meshStandardMaterial color="#d3dade" roughness={0.78} />
+        <WallMaterial />
       </mesh>
 
       <FactoryRoof />
@@ -115,18 +95,18 @@ function BackWall() {
       ].map(({ x, width }) => (
         <mesh key={`back-wall-full-${x}`} receiveShadow position={[x, wallHeight / 2, -halfFloorDepth]}>
           <boxGeometry args={[width, wallHeight, wallThickness]} />
-          <meshStandardMaterial color="#c7d0d6" roughness={0.78} />
+          <WallMaterial />
         </mesh>
       ))}
       {[leftWindowX, rightWindowX].map((x) => (
         <group key={`back-window-wall-${x}`}>
           <mesh receiveShadow position={[x, windowBottomY / 2, -halfFloorDepth]}>
             <boxGeometry args={[windowWidth, windowBottomY, wallThickness]} />
-            <meshStandardMaterial color="#c7d0d6" roughness={0.78} />
+            <WallMaterial />
           </mesh>
           <mesh receiveShadow position={[x, windowTopY + (wallHeight - windowTopY) / 2, -halfFloorDepth]}>
             <boxGeometry args={[windowWidth, wallHeight - windowTopY, wallThickness]} />
-            <meshStandardMaterial color="#c7d0d6" roughness={0.78} />
+            <WallMaterial />
           </mesh>
         </group>
       ))}

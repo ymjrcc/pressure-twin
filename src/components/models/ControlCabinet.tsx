@@ -11,7 +11,7 @@ function ControlCabinet({ position = defaultPosition }: ControlCabinetProps) {
     <group position={position}>
       <mesh castShadow receiveShadow position={[0, 1.05, 0]}>
         <boxGeometry args={[1.05, 2.1, 0.42]} />
-        <meshStandardMaterial color="#2f3b46" roughness={0.5} metalness={0.18} />
+        <meshStandardMaterial color="#23656f" roughness={0.5} metalness={0.16} />
       </mesh>
 
       <mesh castShadow receiveShadow position={[0, 1.12, 0.215]}>
@@ -39,7 +39,7 @@ function ControlCabinet({ position = defaultPosition }: ControlCabinetProps) {
 
       <mesh castShadow receiveShadow position={[0, 0.05, 0]}>
         <boxGeometry args={[1.16, 0.1, 0.5]} />
-        <meshStandardMaterial color="#1f2933" roughness={0.62} metalness={0.2} />
+        <meshStandardMaterial color="#18434a" roughness={0.62} metalness={0.18} />
       </mesh>
     </group>
   )
