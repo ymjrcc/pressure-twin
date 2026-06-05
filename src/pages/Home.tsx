@@ -6,7 +6,6 @@ import DeviceLabel from '@/components/models/DeviceLabel'
 import Factory from '@/components/models/Factory'
 import HeatExchanger from '@/components/models/HeatExchanger'
 import HorizontalPressureVessel from '@/components/models/HorizontalPressureVessel'
-import ProcessPipeline from '@/components/models/ProcessPipeline'
 import ScalePerson from '@/components/models/ScalePerson'
 import VerticalStorageTank from '@/components/models/VerticalStorageTank'
 
@@ -29,20 +28,20 @@ function WorkshopScene() {
 
       <Factory />
       <ScalePerson position={[-7.2, 0, -5.4]} />
-      <VerticalStorageTank position={[4.25, 0, 3]} />
+      <VerticalStorageTank position={[4.25, 0, 3]} rotation={[0, -Math.PI / 3, 0]} />
       <HorizontalPressureVessel position={[-3.5, 0, -3.8]} />
       <HorizontalPressureVessel position={[3.5, 0, -3.8]} />
       <HeatExchanger position={[-4.5, 0, 1.8]} />
       <CirculationPump position={[-0.2, 0, 2.4]} />
-      <ControlCabinet position={[7.2, 0, 5.4]} />
-      <ProcessPipeline />
+      <ControlCabinet position={[7.2, 0, 5.4]} rotation={[0, -Math.PI / 2, 0]} />
+      {/* <ProcessPipeline /> */}
 
-      <DeviceLabel index={1} code="V-101" name="卧式压力容器" model="6.0 x Φ2.0" position={[-3.5, 3.15, -3.8]} />
-      <DeviceLabel index={2} code="V-102" name="卧式压力容器" model="6.0 x Φ2.0" position={[3.5, 3.15, -3.8]} />
-      <DeviceLabel index={3} code="T-201" name="立式储罐" model="Φ2.0 x 3.4" position={[4.25, 4.05, 3]} />
-      <DeviceLabel index={4} code="E-101" name="换热器" model="管壳式" position={[-4.5, 2.05, 1.8]} />
-      <DeviceLabel index={5} name="控制柜" position={[7.2, 2.5, 5.4]} />
-      <DeviceLabel index={6} name="循环泵" model="PU-101" position={[-0.2, 1.45, 2.4]} />
+      <DeviceLabel index={1} code="T-201" name="立式储罐" model="Φ2.0 x 3.4" position={[4.25, 4.7, 3]} />
+      <DeviceLabel index={2} name="循环泵" model="PU-101" position={[-0.2, 1.7, 2.4]} />
+      <DeviceLabel index={3} code="E-101" name="换热器" model="管壳式" position={[-4.5, 2.2, 1.8]} />
+      <DeviceLabel index={4} code="V-101" name="卧式压力容器" model="6.0 x Φ2.0" position={[-3.5, 3.5, -3.8]} />
+      <DeviceLabel index={5} code="V-102" name="卧式压力容器" model="6.0 x Φ2.0" position={[3.5, 3.5, -3.8]} />
+      <DeviceLabel index={6} name="控制柜" position={[7.2, 2.6, 5.4]} />
     </>
   )
 }
