@@ -122,6 +122,14 @@ function ControlCabinet({ position = defaultPosition, rotation }: ControlCabinet
         <boxGeometry args={[0.44, 0.17, 0.018]} />
         <meshStandardMaterial color="#60a5fa" emissive="#2563eb" emissiveIntensity={0.45} roughness={0.22} />
       </mesh>
+      <mesh castShadow receiveShadow position={[-0.12, 1.66, 0.335]}>
+        <boxGeometry args={[0.06, 0.1, 0.012]} />
+        <meshStandardMaterial color="#22d3ee" emissive="#0891b2" emissiveIntensity={0.35} roughness={0.22} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0.04, 1.66, 0.335]}>
+        <boxGeometry args={[0.11, 0.04, 0.012]} />
+        <meshStandardMaterial color="#facc15" emissive="#ca8a04" emissiveIntensity={0.25} roughness={0.24} />
+      </mesh>
       <mesh castShadow receiveShadow position={[-0.12, 1.66, 0.332]}>
         <boxGeometry args={[0.16, 0.018, 0.012]} />
         <meshStandardMaterial color="#dbeafe" emissive="#93c5fd" emissiveIntensity={0.35} roughness={0.2} />
@@ -137,6 +145,22 @@ function ControlCabinet({ position = defaultPosition, rotation }: ControlCabinet
       {buttons.map(([x, y, color]) => (
         <PushButton key={`button-${x}-${y}`} color={color} x={x} y={y} />
       ))}
+      <mesh castShadow receiveShadow position={[0.38, 0.72, 0.302]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.05, 24]} />
+        <meshStandardMaterial color="#b91c1c" roughness={0.3} metalness={0.08} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0, 0.34, 0.298]}>
+        <circleGeometry args={[0.17, 3]} />
+        <meshStandardMaterial color="#facc15" roughness={0.34} metalness={0.08} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0, 0.34, 0.312]} rotation={[0, 0, -0.2]}>
+        <boxGeometry args={[0.035, 0.19, 0.012]} />
+        <meshStandardMaterial color="#111827" roughness={0.38} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0, 0.25, 0.312]}>
+        <boxGeometry args={[0.11, 0.018, 0.012]} />
+        <meshStandardMaterial color="#111827" roughness={0.38} />
+      </mesh>
 
       {[0.48, 0.42, 0.36, 0.3].map((y) => (
         <Louver key={`cabinet-louver-${y}`} y={y} />

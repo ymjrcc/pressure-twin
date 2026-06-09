@@ -1,4 +1,6 @@
+import { Html } from '@react-three/drei'
 import type { ThreeElements } from '@react-three/fiber'
+import { Flange, Transmitter } from './ProcessFittings'
 
 type VerticalStorageTankProps = {
   position?: ThreeElements['group']['position']
@@ -14,6 +16,11 @@ type BoltRingProps = {
   count?: number
   radius: number
   y: number
+}
+
+type InstrumentTagProps = {
+  code: string
+  position: ThreeElements['group']['position']
 }
 
 const diameter = 2
@@ -134,11 +141,82 @@ function SideNozzle() {
   )
 }
 
+function ReturnNozzle() {
+  return (
+    <group position={[-radius - 0.035, 2.78, 0.18]} rotation={[0, 0, Math.PI / 2]}>
+      <mesh castShadow receiveShadow position={[0, -0.16, 0]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.32, 24]} />
+        <meshStandardMaterial {...darkMetalMaterial} />
+      </mesh>
+      <Flange position={[0, -0.34, 0]} direction={[0, 1, 0]} radius={0.21} />
+    </group>
+  )
+}
+
+function TankInstruments() {
+  return (
+    <group>
+      <Transmitter position={[0.86, 2.55, 0.1]} rotation={[0, -Math.PI / 2, 0]} />
+      <InstrumentTag code="LG-201" position={[1.18, 3.16, 0.18]} />
+      <mesh castShadow receiveShadow position={[radius + 0.04, 2.05, 0.08]} rotation={[0, Math.PI / 2, 0]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.1, 24]} />
+        <meshStandardMaterial color="#55636d" roughness={0.42} metalness={0.34} />
+      </mesh>
+    </group>
+  )
+}
+
+function InstrumentTag({ code, position }: InstrumentTagProps) {
+  return (
+    <group position={position}>
+      <Html center distanceFactor={8} occlude>
+        <div
+          style={{
+            background: 'rgba(15, 23, 42, 0.82)',
+            border: '1px solid rgba(226, 232, 240, 0.28)',
+            borderRadius: 4,
+            color: '#f8fafc',
+            fontFamily:
+              'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: 0,
+            lineHeight: 1,
+            padding: '4px 7px',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {code}
+        </div>
+      </Html>
+    </group>
+  )
+}
+
+function LevelTransmitter() {
+  return (
+    <group>
+      <Transmitter position={[0, height + 0.455, 0]} />
+      <mesh castShadow receiveShadow position={[0, height + 0.08, 0]}>
+        <cylinderGeometry args={[0.018, 0.018, 0.76, 10]} />
+        <meshStandardMaterial color="#6b747a" roughness={0.32} metalness={0.52} />
+      </mesh>
+      <InstrumentTag code="LT-201" position={[0, height + 1.25, 0.12]} />
+    </group>
+  )
+}
+
 function Manway() {
   const bolts = Array.from({ length: 10 }, (_, index) => (index / 10) * Math.PI * 2)
+  const angle = Math.PI * 0.18
+  const manwayRadius = radius + 0.03
 
   return (
-    <group position={[0, 0.95, radius + 0.03]} rotation={[Math.PI / 2, 0, 0]}>
+    <group
+      position={[-Math.sin(angle) * manwayRadius, 0.95, Math.cos(angle) * manwayRadius]}
+      rotation={[Math.PI / 2, 0, angle]}
+    >
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[0.33, 0.33, 0.08, 44]} />
         <meshStandardMaterial color="#6c7881" roughness={0.44} metalness={0.34} />
@@ -194,7 +272,7 @@ function Ladder() {
   const bracketYs = [0.62, 1.45, 2.28, 3.1]
 
   return (
-    <group>
+    <group rotation={[0, -Math.PI / 2, 0]}>
       <mesh castShadow receiveShadow position={[ladderX, railCenterY, -railZOffset]}>
         <cylinderGeometry args={[0.018, 0.018, railHeight, 12]} />
         <meshStandardMaterial {...safetyMaterial} />
@@ -290,7 +368,10 @@ function VerticalStorageTank({ position = defaultPosition, rotation }: VerticalS
       <GuardRail />
       <TopNozzle />
       <BoltRing radius={0.34} y={height + 0.46} />
+      <LevelTransmitter />
       <SideNozzle />
+      <ReturnNozzle />
+      <TankInstruments />
       <Manway />
       <Ladder />
 

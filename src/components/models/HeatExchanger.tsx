@@ -1,4 +1,5 @@
 import type { ThreeElements } from '@react-three/fiber'
+import { Flange, Valve } from './ProcessFittings'
 
 type HeatExchangerProps = {
   position?: ThreeElements['group']['position']
@@ -109,6 +110,17 @@ function Saddle({ x }: { x: number }) {
   )
 }
 
+function EndProcessNozzles() {
+  return (
+    <group>
+      <Flange position={[-halfLength - 0.32, shellCenterY, 0]} direction={[1, 0, 0]} radius={0.22} />
+      <Valve position={[-halfLength - 0.68, shellCenterY, 0]} direction={[1, 0, 0]} />
+      <Flange position={[halfLength + 0.32, shellCenterY, 0]} direction={[1, 0, 0]} radius={0.22} />
+      <Valve position={[halfLength + 0.68, shellCenterY, 0]} direction={[1, 0, 0]} />
+    </group>
+  )
+}
+
 function HeatExchanger({ position = defaultPosition }: HeatExchangerProps) {
   return (
     <group position={position}>
@@ -127,6 +139,7 @@ function HeatExchanger({ position = defaultPosition }: HeatExchangerProps) {
       <EndCap side={1} />
       <FlangedNozzle x={-0.78} />
       <FlangedNozzle x={0.78} z={-0.04} />
+      <EndProcessNozzles />
 
       <Saddle x={-0.94} />
       <Saddle x={0.94} />

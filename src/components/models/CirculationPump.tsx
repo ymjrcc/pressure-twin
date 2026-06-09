@@ -1,7 +1,14 @@
+import { Html } from '@react-three/drei'
 import type { ThreeElements } from '@react-three/fiber'
+import { PressureGauge, Valve } from './ProcessFittings'
 
 type CirculationPumpProps = {
   position?: ThreeElements['group']['position']
+}
+
+type InstrumentTagProps = {
+  code: string
+  position: ThreeElements['group']['position']
 }
 
 const defaultPosition: [number, number, number] = [0, 0, 0]
@@ -76,6 +83,34 @@ function BaseBolt({ x, z }: { x: number; z: number }) {
   )
 }
 
+function InstrumentTag({ code, position }: InstrumentTagProps) {
+  return (
+    <group position={position}>
+      <Html center distanceFactor={8} occlude>
+        <div
+          style={{
+            background: 'rgba(15, 23, 42, 0.82)',
+            border: '1px solid rgba(226, 232, 240, 0.28)',
+            borderRadius: 4,
+            color: '#f8fafc',
+            fontFamily:
+              'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: 0,
+            lineHeight: 1,
+            padding: '4px 7px',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {code}
+        </div>
+      </Html>
+    </group>
+  )
+}
+
 function CirculationPump({ position = defaultPosition }: CirculationPumpProps) {
   const fins = Array.from({ length: 9 }, (_, index) => -Math.PI * 0.72 + index * 0.18)
   const baseBolts = [
@@ -141,12 +176,16 @@ function CirculationPump({ position = defaultPosition }: CirculationPumpProps) {
         <meshStandardMaterial {...darkMaterial} />
       </mesh>
       <Flange x={1.08} radius={0.24} />
+      <Valve position={[1.44, 0.52, 0]} direction={[1, 0, 0]} />
+      <PressureGauge position={[1.38, 0.82, 0]} />
+      <InstrumentTag code="PG-103" position={[1.38, 1.58, 0.1]} />
       <mesh castShadow receiveShadow position={[0.38, 1.2, 0]}>
         <cylinderGeometry args={[0.22, 0.22, 0.08, 32]} />
         <meshStandardMaterial color="#4f5d68" roughness={0.44} metalness={0.32} />
       </mesh>
 
       <Flange x={-1.12} radius={0.2} />
+      <Valve position={[-1.44, 0.52, 0]} direction={[1, 0, 0]} />
     </group>
   )
 }
