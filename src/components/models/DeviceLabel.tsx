@@ -1,66 +1,48 @@
 import { Html } from '@react-three/drei'
-import type { ThreeElements } from '@react-three/fiber'
+import type { DeviceInfo } from '@/data/workshopDevices'
 
-type DeviceLabelProps = {
-  index: number
-  code?: string
-  name: string
-  model?: string
-  position: ThreeElements['group']['position']
-}
+type DeviceLabelProps = Pick<DeviceInfo, 'code' | 'position'>
 
-function DeviceLabel({ index, code, name, model, position }: DeviceLabelProps) {
+export default function DeviceLabel({ code, position }: DeviceLabelProps) {
   return (
     <group position={position}>
-      <Html center distanceFactor={10} occlude>
+      <Html center distanceFactor={8} occlude>
         <div
           style={{
             alignItems: 'center',
+            background: 'rgba(186, 230, 253, 0.96)',
+            border: '1px solid rgba(14, 116, 144, 0.42)',
+            borderRadius: 6,
+            boxShadow: '0 6px 18px rgba(14, 116, 144, 0.24), 0 0 0 2px rgba(255, 255, 255, 0.18)',
+            color: '#172033',
             display: 'flex',
-            gap: 16,
-            // minWidth: 148,
-            padding: '8px 16px',
-            border: '1px solid rgba(226, 232, 240, 0.2)',
-            borderRadius: 8,
-            background: 'rgba(15, 23, 42, 0.78)',
-            boxShadow: '0 8px 22px rgba(15, 23, 42, 0.28)',
-            color: '#f8fafc',
+            gap: 5,
             fontFamily:
               'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            fontSize: 13,
-            lineHeight: 1.25,
-            backdropFilter: 'blur(6px)',
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: 0,
+            lineHeight: 1,
+            padding: '5px 8px',
             pointerEvents: 'none',
-            textAlign: 'left',
             whiteSpace: 'nowrap',
           }}
         >
-          <div
+          <span
             style={{
-              alignItems: 'center',
-              background: '#facc15',
+              background: 'rgba(23, 32, 51, 0.9)',
               borderRadius: 999,
-              color: '#172033',
-              display: 'flex',
-              flex: '0 0 auto',
-              fontSize: 14,
-              fontWeight: 800,
-              height: 26,
-              justifyContent: 'center',
-              width: 26,
+              color: '#7dd3fc',
+              fontSize: 10,
+              lineHeight: 1,
+              padding: '2px 4px',
             }}
           >
-            {index}
-          </div>
-          <div>
-            {code ? <div style={{ fontSize: 14, fontWeight: 800 }}>{code}</div> : null}
-            <div style={{ marginTop: code ? 2 : 0, fontSize: 13, fontWeight: code ? 600 : 800 }}>{name}</div>
-            {model ? <div style={{ marginTop: 2, color: '#cbd5e1', fontSize: 12 }}>{model}</div> : null}
-          </div>
+            设备
+          </span>
+          {code}
         </div>
       </Html>
     </group>
   )
 }
-
-export default DeviceLabel

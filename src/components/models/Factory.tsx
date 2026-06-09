@@ -20,7 +20,7 @@ const rightWindowLeft = rightWindowX - windowWidth / 2
 const rightWindowRight = rightWindowX + windowWidth / 2
 
 function WallMaterial() {
-  return <meshStandardMaterial color="#c7d0d6" roughness={0.78} transparent opacity={0.5} />
+  return <meshStandardMaterial color="#c7d0d6" depthWrite={false} roughness={0.78} transparent opacity={0.5} />
 }
 
 function RectangularGrid() {
@@ -118,7 +118,7 @@ function FactoryRoof() {
   return (
     <mesh receiveShadow position={[0, wallHeight + 0.08, 0]}>
       <boxGeometry args={[floorWidth, 0.16, floorDepth]} />
-      <meshStandardMaterial color="#b8c1c8" roughness={0.72} metalness={0.04} transparent opacity={0.32} />
+      <meshStandardMaterial color="#b8c1c8" depthWrite={false} roughness={0.72} metalness={0.04} transparent opacity={0.32} />
     </mesh>
   )
 }
@@ -140,7 +140,7 @@ function FactoryWindow({ position }: { position: [number, number, number] }) {
     <group position={position}>
       <mesh>
         <boxGeometry args={[2.42, 1.16, 0.035]} />
-        <meshStandardMaterial color="#9bd3e6" roughness={0.12} metalness={0.04} transparent opacity={0.36} />
+        <meshStandardMaterial color="#9bd3e6" depthWrite={false} roughness={0.12} metalness={0.04} transparent opacity={0.36} />
       </mesh>
       <mesh position={[0, 0.69, 0.025]}>
         <boxGeometry args={[2.78, 0.12, 0.08]} />

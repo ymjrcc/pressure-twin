@@ -145,14 +145,6 @@ function ControlCabinet({ position = defaultPosition, rotation }: ControlCabinet
       {buttons.map(([x, y, color]) => (
         <PushButton key={`button-${x}-${y}`} color={color} x={x} y={y} />
       ))}
-      <mesh castShadow receiveShadow position={[0.38, 0.72, 0.302]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.08, 0.08, 0.05, 24]} />
-        <meshStandardMaterial color="#b91c1c" roughness={0.3} metalness={0.08} />
-      </mesh>
-      <mesh castShadow receiveShadow position={[0, 0.34, 0.298]}>
-        <circleGeometry args={[0.17, 3]} />
-        <meshStandardMaterial color="#facc15" roughness={0.34} metalness={0.08} />
-      </mesh>
       <mesh castShadow receiveShadow position={[0, 0.34, 0.312]} rotation={[0, 0, -0.2]}>
         <boxGeometry args={[0.035, 0.19, 0.012]} />
         <meshStandardMaterial color="#111827" roughness={0.38} />

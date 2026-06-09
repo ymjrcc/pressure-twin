@@ -1,8 +1,11 @@
-import { Canvas } from '@react-three/fiber'
+import { useState, type ReactNode } from 'react'
+import { Canvas, type ThreeEvent } from '@react-three/fiber'
 import { AdaptiveDpr, AdaptiveEvents, OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import WorkshopLegend from '@/components/WorkshopLegend'
 import CirculationPump from '@/components/models/CirculationPump'
 import ControlCabinet from '@/components/models/ControlCabinet'
 import DeviceLabel from '@/components/models/DeviceLabel'
+import DeviceSelectionHalo from '@/components/models/DeviceSelectionHalo'
 import Factory from '@/components/models/Factory'
 import HeatExchanger from '@/components/models/HeatExchanger'
 import HorizontalPressureVessel from '@/components/models/HorizontalPressureVessel'
@@ -10,8 +13,33 @@ import ProcessPipeline from '@/components/models/ProcessPipeline'
 import ScalePerson from '@/components/models/ScalePerson'
 import SignalLines from '@/components/models/SignalLines'
 import VerticalStorageTank from '@/components/models/VerticalStorageTank'
+import { devices, type DeviceCode } from '@/data/workshopDevices'
 
-function WorkshopScene() {
+type SelectableDeviceProps = {
+  children: ReactNode
+  code: DeviceCode
+  onSelect: (code: DeviceCode) => void
+}
+
+type WorkshopSceneProps = {
+  onSelectDevice: (code: DeviceCode) => void
+  selectedDeviceCode: DeviceCode | null
+}
+
+function SelectableDevice({ children, code, onSelect }: SelectableDeviceProps) {
+  return (
+    <group
+      onClick={(event: ThreeEvent<MouseEvent>) => {
+        event.stopPropagation()
+        onSelect(code)
+      }}
+    >
+      {children}
+    </group>
+  )
+}
+
+function WorkshopScene({ onSelectDevice, selectedDeviceCode }: WorkshopSceneProps) {
   return (
     <>
       <color attach="background" args={['#dfe5e9']} />
@@ -30,31 +58,54 @@ function WorkshopScene() {
 
       <Factory />
       <ScalePerson position={[-7.2, 0, -5.4]} />
-      <VerticalStorageTank position={[5.2, 0, 2.3]} rotation={[0, 0, 0]} />
-      <HorizontalPressureVessel position={[-4.2, 0, -3.2]} instrumentSuffix="101" />
-      <HorizontalPressureVessel position={[2.6, 0, -3.2]} instrumentSuffix="102" />
-      <HeatExchanger position={[-3.4, 0, 1.5]} />
-      <CirculationPump position={[1.6, 0, 1.8]} />
-      <ControlCabinet position={[-0.9, 0, 5.55]} rotation={[0, 0, 0]} />
+      <SelectableDevice code="T-201" onSelect={onSelectDevice}>
+        <VerticalStorageTank position={[5.2, 0, 2.3]} rotation={[0, 0, 0]} />
+      </SelectableDevice>
+      <SelectableDevice code="V-101" onSelect={onSelectDevice}>
+        <HorizontalPressureVessel position={[-4.2, 0, -3.2]} instrumentSuffix="101" />
+      </SelectableDevice>
+      <SelectableDevice code="V-102" onSelect={onSelectDevice}>
+        <HorizontalPressureVessel position={[2.6, 0, -3.2]} instrumentSuffix="102" />
+      </SelectableDevice>
+      <SelectableDevice code="E-101" onSelect={onSelectDevice}>
+        <HeatExchanger position={[-3.4, 0, 1.5]} />
+      </SelectableDevice>
+      <SelectableDevice code="PU-101" onSelect={onSelectDevice}>
+        <CirculationPump position={[1.6, 0, 1.8]} />
+      </SelectableDevice>
+      <SelectableDevice code="CC-101" onSelect={onSelectDevice}>
+        <ControlCabinet position={[-0.9, 0, 5.55]} rotation={[0, 0, 0]} />
+      </SelectableDevice>
       <ProcessPipeline />
       <SignalLines />
+      <DeviceSelectionHalo selectedDeviceCode={selectedDeviceCode} />
 
-      <DeviceLabel index={1} code="T-201" name="立式储罐" model="Φ2.0 x 3.4" position={[6.25, 4.55, 2.45]} />
-      <DeviceLabel index={2} code="PU-101" name="循环泵" position={[1.55, 1.72, 2.45]} />
-      <DeviceLabel index={3} code="E-101" name="换热器" model="管壳式" position={[-3.45, 2.12, 2.15]} />
-      <DeviceLabel index={4} code="V-101" name="卧式压力容器" model="6.0 x Φ2.0" position={[-4.35, 3.62, -2.05]} />
-      <DeviceLabel index={5} code="V-102" name="卧式压力容器" model="6.0 x Φ2.0" position={[2.8, 3.62, -2.05]} />
-      <DeviceLabel index={6} name="控制柜" position={[-0.9, 2.65, 6]} />
+      {devices.map((device) => (
+        <DeviceLabel key={device.code} code={device.code} position={device.position} />
+      ))}
     </>
   )
 }
 
 export default function Home() {
+  const [selectedDeviceCode, setSelectedDeviceCode] = useState<DeviceCode | null>(null)
+  const toggleSelectedDevice = (code: DeviceCode) => {
+    setSelectedDeviceCode((currentCode) => (currentCode === code ? null : code))
+  }
+
   return (
     <div className="relative h-[calc(100vh-4rem)] min-h-[620px] overflow-hidden bg-[#eef2f5]">
-      <Canvas shadows dpr={[1, 2]} camera={{ position: [9.5, 6.6, 10.5], fov: 48 }}>
+      <Canvas
+        shadows
+        dpr={[1, 2]}
+        camera={{ position: [9.5, 6.6, 10.5], fov: 48 }}
+        onPointerMissed={() => setSelectedDeviceCode(null)}
+      >
         <PerspectiveCamera makeDefault position={[-8, 6.6, 15]} fov={48} />
-        <WorkshopScene />
+        <WorkshopScene
+          onSelectDevice={toggleSelectedDevice}
+          selectedDeviceCode={selectedDeviceCode}
+        />
         <OrbitControls
           makeDefault
           target={[0.5, 1, -0.2]}
@@ -67,16 +118,7 @@ export default function Home() {
         <AdaptiveDpr pixelated />
         <AdaptiveEvents />
       </Canvas>
-      <div className="pointer-events-none absolute bottom-5 left-5 grid min-w-[210px] gap-2 rounded-[8px] border border-white/20 bg-slate-900/82 px-4 py-3 text-[13px] leading-tight text-white shadow-lg backdrop-blur">
-        <div className="flex items-center gap-3">
-          <span className="inline-block h-[3px] w-13 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.45)]" />
-          <span>工艺介质流向</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="inline-block w-13 border-t-[3px] border-dashed border-violet-400" />
-          <span>信号/数据连接</span>
-        </div>
-      </div>
+      <WorkshopLegend selectedDeviceCode={selectedDeviceCode} />
     </div>
   )
 }
