@@ -1,5 +1,6 @@
 import type { ThreeElements } from '@react-three/fiber'
 import { Flange, Valve } from './ProcessFittings'
+import { equipmentMaterialConfig } from './materialConfigs'
 
 type HeatExchangerProps = {
   position?: ThreeElements['group']['position']
@@ -24,23 +25,9 @@ const shellCenterY = radius + saddleHeight
 const halfLength = length / 2
 const defaultPosition: [number, number, number] = [0, 0, 0]
 
-const shellMaterial = {
-  color: '#c9873f',
-  roughness: 0.38,
-  metalness: 0.34,
-}
-
-const darkMetalMaterial = {
-  color: '#4b5563',
-  roughness: 0.52,
-  metalness: 0.24,
-}
-
-const rimMaterial = {
-  color: '#e2b36f',
-  roughness: 0.34,
-  metalness: 0.36,
-}
+const shellMaterial = equipmentMaterialConfig.heatExchanger.shell
+const darkMetalMaterial = equipmentMaterialConfig.fittings.darkMetal
+const rimMaterial = equipmentMaterialConfig.heatExchanger.rim
 
 function ShellRing({ radius: ringRadius = radius + 0.012, tube = 0.014, x }: RingProps) {
   return (
@@ -56,11 +43,11 @@ function FlangedNozzle({ x, z = 0 }: NozzleProps) {
     <group position={[x, shellCenterY + radius, z]}>
       <mesh castShadow receiveShadow position={[0, 0.14, 0]}>
         <cylinderGeometry args={[0.09, 0.09, 0.28, 24]} />
-        <meshStandardMaterial color="#8a531f" roughness={0.46} metalness={0.28} />
+        <meshStandardMaterial color="#76481f" roughness={0.5} metalness={0.34} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.3, 0]}>
         <cylinderGeometry args={[0.18, 0.18, 0.06, 32]} />
-        <meshStandardMaterial color="#a86124" roughness={0.42} metalness={0.3} />
+        <meshStandardMaterial {...equipmentMaterialConfig.heatExchanger.cap} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.36, 0]}>
         <torusGeometry args={[0.13, 0.011, 8, 32]} />
@@ -77,11 +64,11 @@ function EndCap({ side }: { side: -1 | 1 }) {
     <group position={[x, shellCenterY, 0]} rotation={[0, 0, Math.PI / 2]}>
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[radius * 0.96, radius * 0.96, 0.16, 48]} />
-        <meshStandardMaterial color="#a9652d" roughness={0.44} metalness={0.3} />
+        <meshStandardMaterial {...equipmentMaterialConfig.heatExchanger.cap} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, side * 0.1, 0]}>
         <cylinderGeometry args={[0.34, 0.34, 0.06, 40]} />
-        <meshStandardMaterial color="#70451f" roughness={0.48} metalness={0.26} />
+        <meshStandardMaterial color="#5f3d22" roughness={0.52} metalness={0.34} />
       </mesh>
     </group>
   )
@@ -92,7 +79,7 @@ function Saddle({ x }: { x: number }) {
     <group position={[x, 0, 0]}>
       <mesh castShadow receiveShadow position={[0, 0.035, 0]}>
         <boxGeometry args={[0.46, 0.07, 0.82]} />
-        <meshStandardMaterial color="#596771" roughness={0.58} metalness={0.18} />
+        <meshStandardMaterial color="#3d4850" roughness={0.6} metalness={0.24} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, saddleHeight / 2, -0.25]}>
         <boxGeometry args={[0.28, saddleHeight, 0.12]} />
@@ -104,7 +91,7 @@ function Saddle({ x }: { x: number }) {
       </mesh>
       <mesh castShadow receiveShadow position={[0, saddleHeight + 0.035, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.28, 0.28, 0.3, 28, 1, true]} />
-        <meshStandardMaterial color="#65737d" roughness={0.52} metalness={0.22} side={2} />
+        <meshStandardMaterial color="#46535b" roughness={0.56} metalness={0.28} side={2} />
       </mesh>
     </group>
   )
@@ -113,8 +100,16 @@ function Saddle({ x }: { x: number }) {
 function EndProcessNozzles() {
   return (
     <group>
+      <mesh castShadow receiveShadow position={[-halfLength - 0.24, shellCenterY, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.34, 28]} />
+        <meshStandardMaterial {...darkMetalMaterial} />
+      </mesh>
       <Flange position={[-halfLength - 0.32, shellCenterY, 0]} direction={[1, 0, 0]} radius={0.22} />
       <Valve position={[-halfLength - 0.68, shellCenterY, 0]} direction={[1, 0, 0]} />
+      <mesh castShadow receiveShadow position={[halfLength + 0.24, shellCenterY, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.34, 28]} />
+        <meshStandardMaterial {...darkMetalMaterial} />
+      </mesh>
       <Flange position={[halfLength + 0.32, shellCenterY, 0]} direction={[1, 0, 0]} radius={0.22} />
       <Valve position={[halfLength + 0.68, shellCenterY, 0]} direction={[1, 0, 0]} />
     </group>
@@ -132,6 +127,14 @@ function HeatExchanger({ position = defaultPosition }: HeatExchangerProps) {
       {[-1.35, -0.68, 0, 0.68, 1.35].map((x) => (
         <ShellRing key={`exchanger-ring-${x}`} x={x} />
       ))}
+      <mesh castShadow receiveShadow position={[-0.22, shellCenterY + radius + 0.018, 0.22]} rotation={[Math.PI / 2, 0, 0]}>
+        <boxGeometry args={[0.48, 0.2, 0.028]} />
+        <meshStandardMaterial color="#23313a" roughness={0.5} metalness={0.24} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[-0.22, shellCenterY + radius + 0.034, 0.22]} rotation={[Math.PI / 2, 0, 0]}>
+        <boxGeometry args={[0.36, 0.028, 0.014]} />
+        <meshStandardMaterial color="#d7c5a2" roughness={0.42} metalness={0.3} />
+      </mesh>
       <ShellRing x={-halfLength + 0.16} radius={radius * 0.92} tube={0.016} />
       <ShellRing x={halfLength - 0.16} radius={radius * 0.92} tube={0.016} />
 

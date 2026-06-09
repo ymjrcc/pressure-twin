@@ -1,10 +1,12 @@
 import { Html } from '@react-three/drei'
 import type { ThreeElements } from '@react-three/fiber'
 import { Flange, PressureGauge, SafetyValve, Transmitter } from './ProcessFittings'
+import { equipmentMaterialConfig, labelStyleConfig } from './materialConfigs'
 
 type HorizontalPressureVesselProps = {
   instrumentSuffix?: string
   position?: ThreeElements['group']['position']
+  showLabels?: boolean
 }
 
 type SaddleProps = {
@@ -31,29 +33,10 @@ const straightShellLength = length - diameter
 const halfLength = length / 2
 const defaultPosition: [number, number, number] = [0, 0, 0]
 
-const shellMaterial = {
-  color: '#c7cdd1',
-  roughness: 0.24,
-  metalness: 0.62,
-}
-
-const rimMaterial = {
-  color: '#e1e6e9',
-  roughness: 0.28,
-  metalness: 0.56,
-}
-
-const darkMetalMaterial = {
-  color: '#7b858b',
-  roughness: 0.38,
-  metalness: 0.46,
-}
-
-const accentMaterial = {
-  color: '#9aa4aa',
-  roughness: 0.34,
-  metalness: 0.5,
-}
+const shellMaterial = equipmentMaterialConfig.horizontalVessel.shell
+const rimMaterial = equipmentMaterialConfig.horizontalVessel.rim
+const darkMetalMaterial = equipmentMaterialConfig.fittings.darkMetal
+const accentMaterial = equipmentMaterialConfig.horizontalVessel.panel
 
 function ShellRing({ radius: ringRadius = radius + 0.015, tube = 0.018, x }: ShellRingProps) {
   return (
@@ -73,7 +56,7 @@ function EndNozzle({ side }: { side: -1 | 1 }) {
       </mesh>
       <mesh castShadow receiveShadow position={[0, side * 0.25, 0]}>
         <cylinderGeometry args={[0.32, 0.32, 0.08, 40]} />
-        <meshStandardMaterial color="#66727c" roughness={0.42} metalness={0.34} />
+        <meshStandardMaterial {...equipmentMaterialConfig.fittings.flange} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, side * 0.32, 0]}>
         <cylinderGeometry args={[0.2, 0.2, 0.1, 30]} />
@@ -90,15 +73,15 @@ function Manway() {
     <group position={[0, shellCenterY - 0.02, radius + 0.045]} rotation={[Math.PI / 2, 0, 0]}>
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[0.52, 0.52, 0.1, 56]} />
-        <meshStandardMaterial color="#aeb7bd" roughness={0.3} metalness={0.56} />
+        <meshStandardMaterial {...accentMaterial} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.05, 0]}>
         <cylinderGeometry args={[0.4, 0.4, 0.055, 48]} />
-        <meshStandardMaterial color="#c7cdd1" roughness={0.26} metalness={0.58} />
+        <meshStandardMaterial {...shellMaterial} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.09, 0]}>
         <torusGeometry args={[0.41, 0.025, 10, 56]} />
-        <meshStandardMaterial color="#e0e5e8" roughness={0.24} metalness={0.58} />
+        <meshStandardMaterial {...rimMaterial} />
       </mesh>
       {bolts.map((angle) => (
         <mesh
@@ -108,7 +91,7 @@ function Manway() {
           position={[Math.cos(angle) * 0.455, 0.1, Math.sin(angle) * 0.455]}
         >
           <sphereGeometry args={[0.035, 12, 8]} />
-          <meshStandardMaterial color="#f0f3f5" roughness={0.3} metalness={0.55} />
+          <meshStandardMaterial {...equipmentMaterialConfig.fittings.bolt} />
         </mesh>
       ))}
       {[-0.18, 0.18].map((x) => (
@@ -136,7 +119,7 @@ function Saddle({ x }: SaddleProps) {
     <group position={[x, 0, 0]}>
       <mesh castShadow receiveShadow position={[0, 0.04, 0]}>
         <boxGeometry args={[0.92, 0.08, 1.65]} />
-        <meshStandardMaterial color="#8b969c" roughness={0.44} metalness={0.34} />
+        <meshStandardMaterial color="#4e5a61" roughness={0.52} metalness={0.34} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, saddleHeight / 2, -0.43]}>
         <boxGeometry args={[0.48, saddleHeight, 0.16]} />
@@ -148,7 +131,7 @@ function Saddle({ x }: SaddleProps) {
       </mesh>
       <mesh castShadow receiveShadow position={[0, saddleHeight + 0.04, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.52, 0.52, 0.54, 32, 1, true]} />
-        <meshStandardMaterial color="#9fa9af" roughness={0.4} metalness={0.4} side={2} />
+        <meshStandardMaterial color="#566168" roughness={0.5} metalness={0.4} side={2} />
       </mesh>
     </group>
   )
@@ -172,16 +155,16 @@ function Nameplate() {
 function InstrumentTag({ code, position }: InstrumentTagProps) {
   return (
     <group position={position}>
-      <Html center distanceFactor={8} occlude>
+      <Html center distanceFactor={labelStyleConfig.sizes.instrumentDistanceFactor} occlude>
         <div
           style={{
-            background: 'rgba(15, 23, 42, 0.82)',
-            border: '1px solid rgba(226, 232, 240, 0.28)',
+            background: labelStyleConfig.instrument.background,
+            border: labelStyleConfig.instrument.border,
             borderRadius: 4,
-            color: '#f8fafc',
+            color: labelStyleConfig.instrument.color,
             fontFamily:
               'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            fontSize: 11,
+            fontSize: labelStyleConfig.sizes.instrumentFontSize,
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1,
@@ -197,19 +180,19 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
   )
 }
 
-function VesselInstruments({ suffix }: { suffix: string }) {
+function VesselInstruments({ showLabels, suffix }: { showLabels: boolean; suffix: string }) {
   const topY = shellCenterY + radius
 
   return (
     <group>
       <PressureGauge position={[-1.9, topY, 0]} />
-      <InstrumentTag code={`PG-${suffix}`} position={[-1.9, topY + 0.94, 0.12]} />
+      {showLabels ? <InstrumentTag code={`PG-${suffix}`} position={[-1.9, topY + 0.94, 0.12]} /> : null}
 
       <Transmitter position={[0, topY, 0.03]} />
-      <InstrumentTag code={`PT-${suffix}`} position={[0, topY + 0.79, 0.12]} />
+      {showLabels ? <InstrumentTag code={`PT-${suffix}`} position={[0, topY + 0.79, 0.12]} /> : null}
 
       <SafetyValve position={[1.9, topY, 0]} />
-      <InstrumentTag code={`PSV-${suffix}`} position={[1.9, topY + 0.98, 0.12]} />
+      {showLabels ? <InstrumentTag code={`PSV-${suffix}`} position={[1.9, topY + 0.98, 0.12]} /> : null}
 
       <Flange position={[-halfLength - 0.36, shellCenterY, 0]} direction={[1, 0, 0]} radius={0.25} />
       <Flange position={[halfLength + 0.36, shellCenterY, 0]} direction={[1, 0, 0]} radius={0.25} />
@@ -217,7 +200,7 @@ function VesselInstruments({ suffix }: { suffix: string }) {
   )
 }
 
-function HorizontalPressureVessel({ instrumentSuffix = '101', position = defaultPosition }: HorizontalPressureVesselProps) {
+function HorizontalPressureVessel({ instrumentSuffix = '101', position = defaultPosition, showLabels = true }: HorizontalPressureVesselProps) {
   return (
     <group position={position}>
       <mesh castShadow receiveShadow position={[0, shellCenterY, 0]} rotation={[0, 0, Math.PI / 2]}>
@@ -228,6 +211,12 @@ function HorizontalPressureVessel({ instrumentSuffix = '101', position = default
       {[-2, -1.15, 0, 1.15, 2].map((x) => (
         <ShellRing key={`shell-ring-${x}`} x={x} />
       ))}
+      {[-0.55, 0.55].map((z) => (
+        <mesh key={`longitudinal-weld-${z}`} castShadow receiveShadow position={[0, shellCenterY + radius * 0.72, z]}>
+          <boxGeometry args={[straightShellLength + 0.2, 0.022, 0.018]} />
+          <meshStandardMaterial color="#8f9aa0" roughness={0.44} metalness={0.56} />
+        </mesh>
+      ))}
       <ShellRing x={-halfLength + 0.18} radius={0.54} tube={0.015} />
       <ShellRing x={halfLength - 0.18} radius={0.54} tube={0.015} />
 
@@ -236,7 +225,7 @@ function HorizontalPressureVessel({ instrumentSuffix = '101', position = default
 
       <Manway />
       <Nameplate />
-      <VesselInstruments suffix={instrumentSuffix} />
+      <VesselInstruments showLabels={showLabels} suffix={instrumentSuffix} />
 
       <Saddle x={-1.85} />
       <Saddle x={1.85} />

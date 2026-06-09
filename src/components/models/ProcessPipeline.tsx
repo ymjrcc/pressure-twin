@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber'
 import { Object3D, Quaternion, Vector3, type InstancedMesh } from 'three'
 
 import { Flange, PipeSupport, PressureGauge, Transmitter, Valve, type PipePoint } from './ProcessFittings'
+import { labelStyleConfig, pipeMaterialConfig } from './materialConfigs'
 
 type PipeRoute = {
   points: readonly PipePoint[]
@@ -23,9 +24,6 @@ type InstrumentTagProps = {
   position: PipePoint
 }
 
-const processColor = '#0891b2'
-const processHighlightColor = '#22d3ee'
-const elbowColor = '#0f6f83'
 const segmentRadius = 0.1
 const elbowRadius = 0.145
 const particleRadius = 0.034
@@ -43,8 +41,8 @@ const routes: readonly PipeRoute[] = [
   },
   {
     points: [
-      [0.16, 0.52, 1.8],
-      [-1.02, 0.72, 1.5],
+      [0.0, 0.52, 1.8],
+      [-1.18, 0.72, 1.5],
     ],
   },
   {
@@ -183,12 +181,12 @@ function FlowParticles({ length }: FlowParticlesProps) {
     <instancedMesh ref={meshRef} args={[undefined, undefined, particleCount]} frustumCulled={false}>
       <sphereGeometry args={[particleRadius, 12, 8]} />
       <meshStandardMaterial
-        color="#ecfeff"
-        emissive="#22d3ee"
-        emissiveIntensity={0.8}
+        color={pipeMaterialConfig.flow.color}
+        emissive={pipeMaterialConfig.flow.emissive}
+        emissiveIntensity={pipeMaterialConfig.flow.emissiveIntensity}
         roughness={0.18}
         transparent
-        opacity={0.9}
+        opacity={pipeMaterialConfig.flow.opacity}
       />
     </instancedMesh>
   )
@@ -205,14 +203,17 @@ function PipeSegment({ end, start }: PipeSegmentProps) {
     <group position={center} quaternion={quaternion}>
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[segmentRadius, segmentRadius, length, 28]} />
+        <meshStandardMaterial {...pipeMaterialConfig.body} depthWrite={false} transparent />
+      </mesh>
+      <mesh>
+        <cylinderGeometry args={[segmentRadius * 0.32, segmentRadius * 0.32, length + 0.01, 16]} />
         <meshStandardMaterial
-          color={processColor}
+          color={pipeMaterialConfig.flowGuide.color}
           depthWrite={false}
-          emissive="#036475"
-          emissiveIntensity={0.18}
-          metalness={0.28}
-          opacity={0.36}
-          roughness={0.2}
+          emissive={pipeMaterialConfig.flowGuide.emissive}
+          emissiveIntensity={pipeMaterialConfig.flowGuide.emissiveIntensity}
+          opacity={pipeMaterialConfig.flowGuide.opacity}
+          roughness={0.24}
           transparent
         />
       </mesh>
@@ -226,16 +227,16 @@ function PipeElbow({ position }: { position: PipePoint }) {
     <group position={position}>
       <mesh castShadow receiveShadow>
         <sphereGeometry args={[elbowRadius, 28, 18]} />
-        <meshStandardMaterial color={elbowColor} depthWrite={false} opacity={0.38} roughness={0.26} metalness={0.3} transparent />
+        <meshStandardMaterial {...pipeMaterialConfig.elbow} depthWrite={false} transparent />
       </mesh>
-      <mesh castShadow receiveShadow>
+      <mesh>
         <sphereGeometry args={[segmentRadius * 0.75, 18, 12]} />
         <meshStandardMaterial
-          color={processHighlightColor}
+          color={pipeMaterialConfig.flowGuide.color}
           depthWrite={false}
-          emissive="#06b6d4"
-          emissiveIntensity={0.28}
-          opacity={0.48}
+          emissive={pipeMaterialConfig.flowGuide.emissive}
+          emissiveIntensity={pipeMaterialConfig.flowGuide.emissiveIntensity}
+          opacity={pipeMaterialConfig.flowGuide.opacity}
           roughness={0.24}
           metalness={0.2}
           transparent
@@ -264,16 +265,16 @@ function PipeRoute({ points }: PipeRoute) {
 function InstrumentTag({ code, position }: InstrumentTagProps) {
   return (
     <group position={position}>
-      <Html center distanceFactor={8} occlude>
+      <Html center distanceFactor={labelStyleConfig.sizes.instrumentDistanceFactor} occlude>
         <div
           style={{
-            background: 'rgba(15, 23, 42, 0.82)',
-            border: '1px solid rgba(226, 232, 240, 0.28)',
+            background: labelStyleConfig.instrument.background,
+            border: labelStyleConfig.instrument.border,
             borderRadius: 4,
-            color: '#f8fafc',
+            color: labelStyleConfig.instrument.color,
             fontFamily:
               'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            fontSize: 11,
+            fontSize: labelStyleConfig.sizes.instrumentFontSize,
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1,

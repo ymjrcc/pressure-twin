@@ -1,10 +1,12 @@
 import { Html } from '@react-three/drei'
 import type { ThreeElements } from '@react-three/fiber'
 import { Flange, Transmitter } from './ProcessFittings'
+import { equipmentMaterialConfig, labelStyleConfig } from './materialConfigs'
 
 type VerticalStorageTankProps = {
   position?: ThreeElements['group']['position']
   rotation?: ThreeElements['group']['rotation']
+  showLabels?: boolean
 }
 
 type AnglePositionProps = {
@@ -28,26 +30,17 @@ const height = 3.4
 const radius = diameter / 2
 const defaultPosition: [number, number, number] = [0, 0, 0]
 
-const shellMaterial = {
-  color: '#9aa6ad',
-  metalness: 0.52,
-  roughness: 0.34,
-}
-
-const darkMetalMaterial = {
-  color: '#42505a',
-  metalness: 0.32,
-  roughness: 0.5,
-}
+const shellMaterial = equipmentMaterialConfig.verticalTank.shell
+const darkMetalMaterial = equipmentMaterialConfig.fittings.darkMetal
 
 const safetyMaterial = {
-  color: '#e2a82e',
+  color: '#c4932d',
   metalness: 0.22,
   roughness: 0.42,
 }
 
 const accentMaterial = {
-  color: '#2f6f9f',
+  color: '#28556c',
   metalness: 0.36,
   roughness: 0.42,
 }
@@ -56,7 +49,7 @@ function ShellRing({ y }: { y: number }) {
   return (
     <mesh castShadow receiveShadow position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
       <torusGeometry args={[radius + 0.012, 0.012, 8, 96]} />
-      <meshStandardMaterial color="#c2cbd1" roughness={0.36} metalness={0.48} />
+      <meshStandardMaterial {...equipmentMaterialConfig.verticalTank.rim} />
     </mesh>
   )
 }
@@ -82,7 +75,7 @@ function GuardRail() {
     <group>
       <mesh castShadow receiveShadow position={[0, height + 0.07, 0]}>
         <cylinderGeometry args={[platformRadius, platformRadius, 0.08, 72]} />
-        <meshStandardMaterial color="#7f8b93" roughness={0.48} metalness={0.38} />
+        <meshStandardMaterial {...equipmentMaterialConfig.verticalTank.platform} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, height + 0.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[platformRadius, 0.025, 10, 96]} />
@@ -153,11 +146,11 @@ function ReturnNozzle() {
   )
 }
 
-function TankInstruments() {
+function TankInstruments({ showLabels }: { showLabels: boolean }) {
   return (
     <group>
       <Transmitter position={[0.86, 2.55, 0.1]} rotation={[0, -Math.PI / 2, 0]} />
-      <InstrumentTag code="LG-201" position={[1.18, 3.16, 0.18]} />
+      {showLabels ? <InstrumentTag code="LG-201" position={[1.18, 3.16, 0.18]} /> : null}
       <mesh castShadow receiveShadow position={[radius + 0.04, 2.05, 0.08]} rotation={[0, Math.PI / 2, 0]}>
         <cylinderGeometry args={[0.12, 0.12, 0.1, 24]} />
         <meshStandardMaterial color="#55636d" roughness={0.42} metalness={0.34} />
@@ -169,16 +162,16 @@ function TankInstruments() {
 function InstrumentTag({ code, position }: InstrumentTagProps) {
   return (
     <group position={position}>
-      <Html center distanceFactor={8} occlude>
+      <Html center distanceFactor={labelStyleConfig.sizes.instrumentDistanceFactor} occlude>
         <div
           style={{
-            background: 'rgba(15, 23, 42, 0.82)',
-            border: '1px solid rgba(226, 232, 240, 0.28)',
+            background: labelStyleConfig.instrument.background,
+            border: labelStyleConfig.instrument.border,
             borderRadius: 4,
-            color: '#f8fafc',
+            color: labelStyleConfig.instrument.color,
             fontFamily:
               'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            fontSize: 11,
+            fontSize: labelStyleConfig.sizes.instrumentFontSize,
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1,
@@ -194,7 +187,7 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
   )
 }
 
-function LevelTransmitter() {
+function LevelTransmitter({ showLabels }: { showLabels: boolean }) {
   return (
     <group>
       <Transmitter position={[0, height + 0.455, 0]} />
@@ -202,7 +195,7 @@ function LevelTransmitter() {
         <cylinderGeometry args={[0.018, 0.018, 0.76, 10]} />
         <meshStandardMaterial color="#6b747a" roughness={0.32} metalness={0.52} />
       </mesh>
-      <InstrumentTag code="LT-201" position={[0, height + 1.25, 0.12]} />
+      {showLabels ? <InstrumentTag code="LT-201" position={[0, height + 1.25, 0.12]} /> : null}
     </group>
   )
 }
@@ -342,7 +335,7 @@ function TankFoot({ angle }: { angle: number }) {
   )
 }
 
-function VerticalStorageTank({ position = defaultPosition, rotation }: VerticalStorageTankProps) {
+function VerticalStorageTank({ position = defaultPosition, rotation, showLabels = true }: VerticalStorageTankProps) {
   const footAngles = [Math.PI / 4, (Math.PI * 3) / 4, (Math.PI * 5) / 4, (Math.PI * 7) / 4]
 
   return (
@@ -354,30 +347,61 @@ function VerticalStorageTank({ position = defaultPosition, rotation }: VerticalS
 
       <mesh castShadow receiveShadow position={[0, height + 0.025, 0]}>
         <cylinderGeometry args={[radius * 0.96, radius, 0.05, 72]} />
-        <meshStandardMaterial color="#b9c3c9" roughness={0.32} metalness={0.5} />
+        <meshStandardMaterial {...equipmentMaterialConfig.verticalTank.rim} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.03, 0]}>
         <cylinderGeometry args={[radius, radius * 0.96, 0.06, 72]} />
-        <meshStandardMaterial color="#87939b" roughness={0.42} metalness={0.4} />
+        <meshStandardMaterial color="#4a565c" roughness={0.48} metalness={0.48} />
       </mesh>
 
       {[0.64, 1.48, 2.32, 3.16].map((y) => (
         <ShellRing key={`shell-ring-${y}`} y={y} />
       ))}
+      <mesh castShadow receiveShadow position={[0, height / 2, radius + 0.012]}>
+        <boxGeometry args={[0.025, height - 0.28, 0.02]} />
+        <meshStandardMaterial color="#455158" roughness={0.5} metalness={0.52} />
+      </mesh>
+      <mesh position={[0.28, height / 2 + 0.1, radius + 0.018]}>
+        <boxGeometry args={[0.22, height - 0.55, 0.012]} />
+        <meshStandardMaterial
+          {...equipmentMaterialConfig.verticalTank.agedHighlight}
+          depthWrite={false}
+          transparent
+        />
+      </mesh>
+      <mesh position={[-0.52, height / 2 - 0.05, radius + 0.019]}>
+        <boxGeometry args={[0.3, height - 0.8, 0.012]} />
+        <meshStandardMaterial
+          {...equipmentMaterialConfig.verticalTank.agedShadow}
+          depthWrite={false}
+          transparent
+        />
+      </mesh>
+      <mesh position={[0, 1.22, radius + 0.02]}>
+        <boxGeometry args={[1.22, 0.12, 0.012]} />
+        <meshStandardMaterial
+          color="#7b878d"
+          depthWrite={false}
+          metalness={0.46}
+          opacity={0.14}
+          roughness={0.5}
+          transparent
+        />
+      </mesh>
 
       <GuardRail />
       <TopNozzle />
       <BoltRing radius={0.34} y={height + 0.46} />
-      <LevelTransmitter />
+      <LevelTransmitter showLabels={showLabels} />
       <SideNozzle />
       <ReturnNozzle />
-      <TankInstruments />
+      <TankInstruments showLabels={showLabels} />
       <Manway />
       <Ladder />
 
       <mesh castShadow receiveShadow position={[0, 0.02, 0]}>
         <cylinderGeometry args={[radius + 0.08, radius + 0.08, 0.04, 72]} />
-        <meshStandardMaterial color="#4b5563" roughness={0.56} metalness={0.18} />
+        <meshStandardMaterial color="#46525a" roughness={0.54} metalness={0.28} />
       </mesh>
       {footAngles.map((angle) => (
         <TankFoot key={`tank-foot-${angle}`} angle={angle} />

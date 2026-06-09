@@ -29,7 +29,7 @@ function App() {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <h1 className="text-xl font-bold text-gray-900">我的应用</h1>
+                <h1 className="text-xl font-bold text-gray-900">承压类特种设备数字孪生监测与巡检系统</h1>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 {menuItems.map((item) => {

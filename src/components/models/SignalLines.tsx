@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Quaternion, Vector3 } from 'three'
 
 import type { PipePoint } from './ProcessFittings'
+import { pipeMaterialConfig } from './materialConfigs'
 
 type SignalRoute = {
   points: readonly PipePoint[]
@@ -12,7 +13,6 @@ type SignalSegmentProps = {
   start: PipePoint
 }
 
-const signalColor = '#a78bfa'
 const yAxis = new Vector3(0, 1, 0)
 
 const signalRoutes: readonly SignalRoute[] = [
@@ -56,7 +56,16 @@ function SignalSegment({ end, start }: SignalSegmentProps) {
       {dashParts.map(({ center, length, quaternion }, index) => (
         <mesh key={`signal-dash-${index}`} castShadow receiveShadow position={center} quaternion={quaternion}>
           <cylinderGeometry args={[0.012, 0.012, length, 8]} />
-          <meshStandardMaterial color={signalColor} emissive="#7c3aed" emissiveIntensity={0.25} roughness={0.38} metalness={0.1} />
+          <meshStandardMaterial
+            color={pipeMaterialConfig.signal.color}
+            depthWrite={false}
+            emissive={pipeMaterialConfig.signal.emissive}
+            emissiveIntensity={pipeMaterialConfig.signal.emissiveIntensity}
+            metalness={0.1}
+            opacity={pipeMaterialConfig.signal.opacity}
+            roughness={0.38}
+            transparent
+          />
         </mesh>
       ))}
     </group>

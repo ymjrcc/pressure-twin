@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { ThreeElements } from '@react-three/fiber'
 import { Quaternion, Vector3 } from 'three'
+import { equipmentMaterialConfig } from './materialConfigs'
 
 export type PipePoint = readonly [number, number, number]
 
@@ -23,16 +24,7 @@ type InstrumentProps = {
 }
 
 const yAxis = new Vector3(0, 1, 0)
-const darkMetalMaterial = {
-  color: '#34414a',
-  metalness: 0.36,
-  roughness: 0.44,
-}
-const boltMaterial = {
-  color: '#d7e0e6',
-  metalness: 0.44,
-  roughness: 0.34,
-}
+const { bolt: boltMaterial, darkMetal: darkMetalMaterial, flange: flangeMaterial, instrumentBlue } = equipmentMaterialConfig.fittings
 
 function directionQuaternion(direction: PipePoint = [0, 1, 0]) {
   const axis = new Vector3(...direction).normalize()
@@ -66,7 +58,7 @@ export function Flange({ direction = [0, 1, 0], position, radius = 0.22 }: Flang
     <group position={position}>
       <mesh castShadow receiveShadow quaternion={quaternion}>
         <cylinderGeometry args={[radius, radius, 0.08, 36]} />
-        <meshStandardMaterial color="#3d4a54" roughness={0.42} metalness={0.42} />
+        <meshStandardMaterial {...flangeMaterial} />
       </mesh>
       {bolts.map((bolt, index) => (
         <mesh key={`flange-bolt-${index}`} castShadow receiveShadow position={bolt}>
@@ -78,7 +70,7 @@ export function Flange({ direction = [0, 1, 0], position, radius = 0.22 }: Flang
   )
 }
 
-export function Valve({ bodyColor = '#2f3b43', direction = [1, 0, 0], position }: ValveProps) {
+export function Valve({ bodyColor = equipmentMaterialConfig.fittings.darkMetal.color, direction = [1, 0, 0], position }: ValveProps) {
   const quaternion = useMemo(() => directionQuaternion(direction), [direction])
 
   return (
@@ -110,15 +102,15 @@ export function PressureGauge({ position, rotation }: InstrumentProps) {
     <group position={position} rotation={rotation}>
       <mesh castShadow receiveShadow position={[0, 0.12, 0]}>
         <cylinderGeometry args={[0.04, 0.04, 0.24, 14]} />
-        <meshStandardMaterial color="#8c969d" roughness={0.32} metalness={0.54} />
+        <meshStandardMaterial color="#707a81" roughness={0.38} metalness={0.58} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.25, 0]}>
         <cylinderGeometry args={[0.08, 0.065, 0.06, 20]} />
-        <meshStandardMaterial color="#b8c0c5" roughness={0.28} metalness={0.56} />
+        <meshStandardMaterial color="#9ba5ab" roughness={0.34} metalness={0.56} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.45, -0.03]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.225, 0.225, 0.08, 48]} />
-        <meshStandardMaterial color="#cfd6da" roughness={0.24} metalness={0.62} />
+        <meshStandardMaterial color="#b9c2c8" roughness={0.34} metalness={0.58} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.45, 0.018]}>
         <circleGeometry args={[0.185, 48]} />
@@ -126,7 +118,7 @@ export function PressureGauge({ position, rotation }: InstrumentProps) {
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.45, 0.034]}>
         <torusGeometry args={[0.186, 0.012, 8, 48]} />
-        <meshStandardMaterial color="#7b858b" roughness={0.26} metalness={0.58} />
+        <meshStandardMaterial color="#606b72" roughness={0.34} metalness={0.58} />
       </mesh>
       {tickAngles.map((angle, index) => {
         const isMajor = index % 2 === 0
@@ -151,7 +143,7 @@ export function PressureGauge({ position, rotation }: InstrumentProps) {
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.35, 0]}>
         <cylinderGeometry args={[0.035, 0.035, 0.18, 14]} />
-        <meshStandardMaterial color="#8c969d" roughness={0.32} metalness={0.54} />
+        <meshStandardMaterial color="#707a81" roughness={0.38} metalness={0.58} />
       </mesh>
     </group>
   )
@@ -162,31 +154,31 @@ export function SafetyValve({ position, rotation }: InstrumentProps) {
     <group position={position} rotation={rotation}>
       <mesh castShadow receiveShadow position={[0, 0.08, 0]}>
         <cylinderGeometry args={[0.1, 0.1, 0.16, 24]} />
-        <meshStandardMaterial color="#9aa4aa" roughness={0.3} metalness={0.58} />
+        <meshStandardMaterial color="#727d84" roughness={0.4} metalness={0.54} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.2, 0]}>
         <cylinderGeometry args={[0.16, 0.16, 0.08, 28]} />
-        <meshStandardMaterial color="#c8d0d4" roughness={0.24} metalness={0.6} />
+        <meshStandardMaterial color="#a5afb5" roughness={0.36} metalness={0.58} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.365, 0]}>
         <cylinderGeometry args={[0.105, 0.13, 0.25, 28]} />
-        <meshStandardMaterial color="#8f999f" roughness={0.3} metalness={0.55} />
+        <meshStandardMaterial color="#66727a" roughness={0.4} metalness={0.54} />
       </mesh>
       <mesh castShadow receiveShadow position={[0.17, 0.36, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.06, 0.06, 0.24, 18]} />
-        <meshStandardMaterial color="#c8d0d4" roughness={0.25} metalness={0.6} />
+        <meshStandardMaterial color="#9da8ae" roughness={0.36} metalness={0.58} />
       </mesh>
       <mesh castShadow receiveShadow position={[0.31, 0.36, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.11, 0.11, 0.05, 24]} />
-        <meshStandardMaterial color="#b7c0c5" roughness={0.28} metalness={0.58} />
+        <meshStandardMaterial color="#89949b" roughness={0.38} metalness={0.56} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.525, 0]}>
         <cylinderGeometry args={[0.12, 0.12, 0.07, 24]} />
-        <meshStandardMaterial color="#c8d0d4" roughness={0.24} metalness={0.6} />
+        <meshStandardMaterial color="#a5afb5" roughness={0.36} metalness={0.58} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.69, 0]}>
         <cylinderGeometry args={[0.082, 0.082, 0.24, 24]} />
-        <meshStandardMaterial color="#e3e7ea" roughness={0.22} metalness={0.62} />
+        <meshStandardMaterial color="#b7c1c7" roughness={0.34} metalness={0.58} />
       </mesh>
       {[-0.055, 0.055].map((x) => (
         <mesh key={`safety-valve-guide-${x}`} castShadow receiveShadow position={[x, 0.69, 0]}>
@@ -200,7 +192,7 @@ export function SafetyValve({ position, rotation }: InstrumentProps) {
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.87, 0]}>
         <cylinderGeometry args={[0.09, 0.075, 0.12, 24]} />
-        <meshStandardMaterial color="#cfd6da" roughness={0.24} metalness={0.62} />
+        <meshStandardMaterial color="#b9c2c8" roughness={0.34} metalness={0.58} />
       </mesh>
     </group>
   )
@@ -211,23 +203,23 @@ export function Transmitter({ position, rotation }: InstrumentProps) {
     <group position={position} rotation={rotation}>
       <mesh castShadow receiveShadow position={[0, 0.12, 0]}>
         <cylinderGeometry args={[0.045, 0.045, 0.24, 14]} />
-        <meshStandardMaterial color="#8c969d" roughness={0.32} metalness={0.54} />
+        <meshStandardMaterial color="#707a81" roughness={0.38} metalness={0.58} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.25, 0]}>
         <cylinderGeometry args={[0.09, 0.075, 0.06, 20]} />
-        <meshStandardMaterial color="#c2cbd0" roughness={0.27} metalness={0.58} />
+        <meshStandardMaterial color="#9da8ae" roughness={0.36} metalness={0.58} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.42, 0]}>
         <boxGeometry args={[0.32, 0.26, 0.2]} />
-        <meshStandardMaterial color="#1f67ad" roughness={0.36} metalness={0.36} />
+        <meshStandardMaterial {...instrumentBlue} />
       </mesh>
       <mesh castShadow receiveShadow position={[-0.2, 0.42, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.13, 0.13, 0.08, 28]} />
-        <meshStandardMaterial color="#dce3e7" roughness={0.24} metalness={0.58} />
+        <meshStandardMaterial color="#b8c2c8" roughness={0.34} metalness={0.58} />
       </mesh>
       <mesh castShadow receiveShadow position={[0.2, 0.42, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.13, 0.13, 0.08, 28]} />
-        <meshStandardMaterial color="#dce3e7" roughness={0.24} metalness={0.58} />
+        <meshStandardMaterial color="#b8c2c8" roughness={0.34} metalness={0.58} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 0.42, 0.106]}>
         <boxGeometry args={[0.17, 0.1, 0.014]} />
@@ -249,7 +241,7 @@ export function PipeSupport({ position }: { position: PipePoint }) {
     <group position={[x, 0, z]}>
       <mesh castShadow receiveShadow position={[0, 0.035, 0]}>
         <boxGeometry args={[0.42, 0.07, 0.42]} />
-        <meshStandardMaterial color="#3d4a54" roughness={0.56} metalness={0.2} />
+        <meshStandardMaterial {...flangeMaterial} roughness={0.56} />
       </mesh>
       <mesh castShadow receiveShadow position={[0, postHeight / 2 + 0.05, 0]}>
         <cylinderGeometry args={[0.035, 0.035, postHeight, 12]} />
@@ -257,7 +249,7 @@ export function PipeSupport({ position }: { position: PipePoint }) {
       </mesh>
       <mesh castShadow receiveShadow position={[0, y - 0.08, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.13, 0.13, 0.38, 24, 1, true]} />
-        <meshStandardMaterial color="#3d4a54" roughness={0.46} metalness={0.3} side={2} />
+        <meshStandardMaterial {...flangeMaterial} roughness={0.48} side={2} />
       </mesh>
     </group>
   )

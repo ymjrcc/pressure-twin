@@ -1,9 +1,11 @@
 import { Html } from '@react-three/drei'
 import type { ThreeElements } from '@react-three/fiber'
 import { PressureGauge, Valve } from './ProcessFittings'
+import { equipmentMaterialConfig, labelStyleConfig } from './materialConfigs'
 
 type CirculationPumpProps = {
   position?: ThreeElements['group']['position']
+  showLabels?: boolean
 }
 
 type InstrumentTagProps = {
@@ -13,29 +15,10 @@ type InstrumentTagProps = {
 
 const defaultPosition: [number, number, number] = [0, 0, 0]
 
-const baseMaterial = {
-  color: '#40505a',
-  roughness: 0.6,
-  metalness: 0.18,
-}
-
-const motorMaterial = {
-  color: '#2563a8',
-  roughness: 0.42,
-  metalness: 0.3,
-}
-
-const pumpMaterial = {
-  color: '#1f5d8d',
-  roughness: 0.44,
-  metalness: 0.32,
-}
-
-const darkMaterial = {
-  color: '#26323d',
-  roughness: 0.56,
-  metalness: 0.24,
-}
+const baseMaterial = equipmentMaterialConfig.pump.base
+const motorMaterial = equipmentMaterialConfig.pump.motor
+const pumpMaterial = equipmentMaterialConfig.pump.casing
+const darkMaterial = equipmentMaterialConfig.fittings.darkMetal
 
 function MotorFin({ angle }: { angle: number }) {
   const radius = 0.36
@@ -45,7 +28,7 @@ function MotorFin({ angle }: { angle: number }) {
   return (
     <mesh castShadow receiveShadow position={[-0.42, y, z]}>
       <boxGeometry args={[0.72, 0.026, 0.055]} />
-      <meshStandardMaterial color="#174c82" roughness={0.46} metalness={0.28} />
+      <meshStandardMaterial color="#203f52" roughness={0.5} metalness={0.34} />
     </mesh>
   )
 }
@@ -57,7 +40,7 @@ function Flange({ x, radius = 0.24 }: { radius?: number; x: number }) {
     <group position={[x, 0.52, 0]} rotation={[0, 0, Math.PI / 2]}>
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[radius, radius, 0.08, 36]} />
-        <meshStandardMaterial color="#4f5d68" roughness={0.44} metalness={0.32} />
+        <meshStandardMaterial {...equipmentMaterialConfig.fittings.flange} />
       </mesh>
       {bolts.map((angle) => (
         <mesh
@@ -86,16 +69,16 @@ function BaseBolt({ x, z }: { x: number; z: number }) {
 function InstrumentTag({ code, position }: InstrumentTagProps) {
   return (
     <group position={position}>
-      <Html center distanceFactor={8} occlude>
+      <Html center distanceFactor={labelStyleConfig.sizes.instrumentDistanceFactor} occlude>
         <div
           style={{
-            background: 'rgba(15, 23, 42, 0.82)',
-            border: '1px solid rgba(226, 232, 240, 0.28)',
+            background: labelStyleConfig.instrument.background,
+            border: labelStyleConfig.instrument.border,
             borderRadius: 4,
-            color: '#f8fafc',
+            color: labelStyleConfig.instrument.color,
             fontFamily:
               'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            fontSize: 11,
+            fontSize: labelStyleConfig.sizes.instrumentFontSize,
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1,
@@ -111,7 +94,7 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
   )
 }
 
-function CirculationPump({ position = defaultPosition }: CirculationPumpProps) {
+function CirculationPump({ position = defaultPosition, showLabels = true }: CirculationPumpProps) {
   const fins = Array.from({ length: 9 }, (_, index) => -Math.PI * 0.72 + index * 0.18)
   const baseBolts = [
     [-0.62, -0.3],
@@ -128,11 +111,11 @@ function CirculationPump({ position = defaultPosition }: CirculationPumpProps) {
       </mesh>
       <mesh castShadow receiveShadow position={[-0.38, 0.23, 0]}>
         <boxGeometry args={[0.92, 0.22, 0.54]} />
-        <meshStandardMaterial color="#4b5563" roughness={0.58} metalness={0.18} />
+        <meshStandardMaterial color="#36434b" roughness={0.6} metalness={0.22} />
       </mesh>
       <mesh castShadow receiveShadow position={[0.42, 0.24, 0]}>
         <boxGeometry args={[0.58, 0.28, 0.54]} />
-        <meshStandardMaterial color="#4b5563" roughness={0.58} metalness={0.18} />
+        <meshStandardMaterial color="#36434b" roughness={0.6} metalness={0.22} />
       </mesh>
       {baseBolts.map(([x, z]) => (
         <BaseBolt key={`pump-base-bolt-${x}-${z}`} x={x} z={z} />
@@ -164,7 +147,7 @@ function CirculationPump({ position = defaultPosition }: CirculationPumpProps) {
       </mesh>
       <mesh castShadow receiveShadow position={[0.38, 0.52, 0.04]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.31, 0.035, 12, 48]} />
-        <meshStandardMaterial color="#174c82" roughness={0.44} metalness={0.32} />
+        <meshStandardMaterial color="#1e3d4d" roughness={0.5} metalness={0.36} />
       </mesh>
 
       <mesh castShadow receiveShadow position={[0.84, 0.52, 0]} rotation={[0, 0, Math.PI / 2]}>
@@ -178,10 +161,10 @@ function CirculationPump({ position = defaultPosition }: CirculationPumpProps) {
       <Flange x={1.08} radius={0.24} />
       <Valve position={[1.44, 0.52, 0]} direction={[1, 0, 0]} />
       <PressureGauge position={[1.38, 0.82, 0]} />
-      <InstrumentTag code="PG-103" position={[1.38, 1.58, 0.1]} />
+      {showLabels ? <InstrumentTag code="PG-103" position={[1.38, 1.58, 0.1]} /> : null}
       <mesh castShadow receiveShadow position={[0.38, 1.2, 0]}>
         <cylinderGeometry args={[0.22, 0.22, 0.08, 32]} />
-        <meshStandardMaterial color="#4f5d68" roughness={0.44} metalness={0.32} />
+        <meshStandardMaterial {...equipmentMaterialConfig.fittings.flange} />
       </mesh>
 
       <Flange x={-1.12} radius={0.2} />

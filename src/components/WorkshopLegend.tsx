@@ -1,15 +1,29 @@
+import { Workflow } from 'lucide-react'
+
 import { devices, instruments, type DeviceCode } from '@/data/workshopDevices'
 
 type WorkshopLegendProps = {
+  onOpenProcessFlow: () => void
   selectedDeviceCode: DeviceCode | null
 }
 
-export default function WorkshopLegend({ selectedDeviceCode }: WorkshopLegendProps) {
+export default function WorkshopLegend({ onOpenProcessFlow, selectedDeviceCode }: WorkshopLegendProps) {
   return (
-    <div className="pointer-events-none absolute bottom-5 left-5 grid max-h-[calc(100%-2.5rem)] min-w-[320px] gap-3 overflow-hidden rounded-[8px] border border-white/20 bg-slate-900/82 px-4 py-3 text-[13px] leading-tight text-white shadow-lg backdrop-blur">
-      <div className="flex items-center gap-3">
-        <span className="inline-block h-[3px] w-13 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.45)]" />
-        <span>工艺介质流向</span>
+    <div className="pointer-events-none grid max-h-full min-w-[320px] gap-3 overflow-hidden rounded-[8px] border border-white/20 bg-slate-900/82 px-4 py-3 text-[13px] leading-tight text-white shadow-lg backdrop-blur">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="inline-block h-[3px] w-13 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.45)]" />
+          <span>工艺介质流向</span>
+        </div>
+        <button
+          aria-label="查看工艺流程"
+          className="pointer-events-auto grid h-8 w-8 place-items-center rounded-[6px] border border-cyan-300/28 bg-cyan-300/12 p-0 text-cyan-100 shadow-none hover:border-cyan-200/55 hover:bg-cyan-300/20 hover:text-white focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
+          onClick={onOpenProcessFlow}
+          title="查看工艺流程"
+          type="button"
+        >
+          <Workflow aria-hidden="true" size={16} strokeWidth={2.4} />
+        </button>
       </div>
       <div className="flex items-center gap-3">
         <span className="inline-block w-13 border-t-[3px] border-dashed border-violet-400" />

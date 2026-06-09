@@ -1,4 +1,5 @@
 import type { ThreeElements } from '@react-three/fiber'
+import { equipmentMaterialConfig } from './materialConfigs'
 
 type ControlCabinetProps = {
   position?: ThreeElements['group']['position']
@@ -13,17 +14,8 @@ type IndicatorProps = {
 
 const defaultPosition: [number, number, number] = [0, 0, 0]
 
-const cabinetMaterial = {
-  color: '#7f8b93',
-  roughness: 0.46,
-  metalness: 0.18,
-}
-
-const trimMaterial = {
-  color: '#3f4b55',
-  roughness: 0.54,
-  metalness: 0.22,
-}
+const cabinetMaterial = equipmentMaterialConfig.cabinet.body
+const trimMaterial = equipmentMaterialConfig.cabinet.trim
 
 function Indicator({ color, x, y }: IndicatorProps) {
   return (
@@ -100,7 +92,11 @@ function ControlCabinet({ position = defaultPosition, rotation }: ControlCabinet
 
       <mesh castShadow receiveShadow position={[0, 1.13, 0.245]}>
         <boxGeometry args={[0.9, 1.68, 0.04]} />
-        <meshStandardMaterial color="#d7dee4" roughness={0.42} metalness={0.1} />
+        <meshStandardMaterial {...equipmentMaterialConfig.cabinet.door} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[0, 1.13, 0.292]}>
+        <boxGeometry args={[0.96, 1.74, 0.018]} />
+        <meshStandardMaterial color="#33414b" roughness={0.52} metalness={0.2} wireframe />
       </mesh>
       <mesh castShadow receiveShadow position={[0, 1.13, 0.272]}>
         <boxGeometry args={[0.02, 1.58, 0.028]} />
@@ -113,6 +109,10 @@ function ControlCabinet({ position = defaultPosition, rotation }: ControlCabinet
       {[1.7, 1.13, 0.56].map((y) => (
         <Hinge key={`cabinet-hinge-${y}`} y={y} />
       ))}
+      <mesh castShadow receiveShadow position={[0, 2.04, 0.254]}>
+        <boxGeometry args={[0.92, 0.035, 0.055]} />
+        <meshStandardMaterial {...trimMaterial} />
+      </mesh>
 
       <mesh castShadow receiveShadow position={[0, 1.66, 0.288]}>
         <boxGeometry args={[0.58, 0.28, 0.05]} />
@@ -165,6 +165,10 @@ function ControlCabinet({ position = defaultPosition, rotation }: ControlCabinet
       <mesh castShadow receiveShadow position={[0, 0.05, 0]}>
         <boxGeometry args={[1.18, 0.1, 0.56]} />
         <meshStandardMaterial color="#18434a" roughness={0.62} metalness={0.18} />
+      </mesh>
+      <mesh receiveShadow position={[0, 0.006, 0.08]}>
+        <boxGeometry args={[1.34, 0.012, 0.74]} />
+        <meshStandardMaterial color="#1f2933" transparent opacity={0.22} roughness={0.8} />
       </mesh>
       <Foot x={-0.4} z={-0.16} />
       <Foot x={0.4} z={-0.16} />
