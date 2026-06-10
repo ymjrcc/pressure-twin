@@ -18,6 +18,7 @@ import ScalePerson from '@/components/models/ScalePerson'
 import SignalLines from '@/components/models/SignalLines'
 import VerticalStorageTank from '@/components/models/VerticalStorageTank'
 import { devices, type DeviceCode } from '@/data/workshopDevices'
+import { useDeviceTelemetry } from '@/hooks/useDeviceTelemetry'
 
 type SelectableDeviceProps = {
   children: ReactNode
@@ -289,6 +290,7 @@ export default function Home() {
   const [isProcessFlowOpen, setIsProcessFlowOpen] = useState(false)
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<DeviceCode | null>(null)
   const [controlInteractionVersion, setControlInteractionVersion] = useState(0)
+  const telemetryByDevice = useDeviceTelemetry(2000)
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const toggleSelectedDevice = (code: DeviceCode) => {
     setSelectedDeviceCode((currentCode) => (currentCode === code ? null : code))
@@ -342,7 +344,11 @@ export default function Home() {
           </div>
         </div>
       ) : null}
-      <DeviceDetailCard selectedDeviceCode={selectedDeviceCode} onClose={() => setSelectedDeviceCode(null)} />
+      <DeviceDetailCard
+        selectedDeviceCode={selectedDeviceCode}
+        telemetryByDevice={telemetryByDevice}
+        onClose={() => setSelectedDeviceCode(null)}
+      />
     </div>
   )
 }

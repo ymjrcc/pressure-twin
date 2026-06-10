@@ -4,7 +4,7 @@ export type DeviceStatus = 'normal' | 'warning' | 'alarm' | 'offline'
 
 export type DeviceThumbnailType = 'tank' | 'pump' | 'exchanger' | 'vessel' | 'cabinet'
 
-export type DeviceParameter = {
+export type StaticDeviceParameter = {
   label: string
   status?: DeviceStatus
   unit?: string
@@ -17,7 +17,7 @@ export type DeviceInfo = {
   haloPosition: [number, number, number]
   haloRadius: number
   name: string
-  parameters: DeviceParameter[]
+  parameters: StaticDeviceParameter[]
   position: [number, number, number]
   status: DeviceStatus
   thumbnailType: DeviceThumbnailType
@@ -45,10 +45,6 @@ export const devices: DeviceInfo[] = [
     haloRadius: 1.5,
     name: '立式储罐',
     parameters: [
-      { label: '运行状态', status: 'normal', value: '稳定运行' },
-      { label: '液位', status: 'normal', unit: '%', value: '68' },
-      { label: '罐内压力', status: 'normal', unit: 'MPa', value: '0.42' },
-      { label: '介质温度', status: 'normal', unit: '℃', value: '38.6' },
       { label: '设计压力', unit: 'MPa', value: '1.60' },
       { label: '下次检验', value: '2026-11-18' },
     ],
@@ -63,12 +59,8 @@ export const devices: DeviceInfo[] = [
     haloRadius: 1.15,
     name: '循环泵',
     parameters: [
-      { label: '运行状态', status: 'normal', value: '运行' },
-      { label: '出口压力', status: 'normal', unit: 'MPa', value: '0.78' },
-      { label: '流量', status: 'normal', unit: 'm3/h', value: '42.5' },
       { label: '电机功率', unit: 'kW', value: '18.5' },
-      { label: '轴承温度', status: 'normal', unit: '℃', value: '54.2' },
-      { label: '振动', status: 'normal', unit: 'mm/s', value: '1.8' },
+      { label: '驱动方式', value: '变频控制' },
     ],
     position: [1.55, 1.72, 2.45],
     status: 'normal',
@@ -81,12 +73,8 @@ export const devices: DeviceInfo[] = [
     haloRadius: 2.15,
     name: '换热器',
     parameters: [
-      { label: '运行状态', status: 'warning', value: '负荷偏高' },
-      { label: '入口温度', unit: '℃', value: '92.4' },
-      { label: '出口温度', status: 'warning', unit: '℃', value: '73.8' },
-      { label: '壳程压力', unit: 'MPa', value: '0.64' },
-      { label: '管程压力', unit: 'MPa', value: '0.58' },
-      { label: '换热效率', status: 'warning', unit: '%', value: '82' },
+      { label: '换热面积', unit: 'm2', value: '35' },
+      { label: '流程形式', value: '管壳式' },
     ],
     position: [-3.45, 2.12, 2.15],
     status: 'warning',
@@ -99,9 +87,6 @@ export const devices: DeviceInfo[] = [
     haloRadius: 3.35,
     name: '卧式压力容器',
     parameters: [
-      { label: '运行状态', status: 'normal', value: '稳定运行' },
-      { label: '工作压力', status: 'normal', unit: 'MPa', value: '0.86' },
-      { label: '工作温度', unit: '℃', value: '46.3' },
       { label: '设计压力', unit: 'MPa', value: '2.50' },
       { label: '容积', unit: 'm3', value: '12.0' },
       { label: '下次检验', value: '2026-09-30' },
@@ -117,9 +102,6 @@ export const devices: DeviceInfo[] = [
     haloRadius: 3.35,
     name: '卧式压力容器',
     parameters: [
-      { label: '运行状态', status: 'normal', value: '稳定运行' },
-      { label: '工作压力', status: 'normal', unit: 'MPa', value: '0.82' },
-      { label: '工作温度', unit: '℃', value: '44.9' },
       { label: '设计压力', unit: 'MPa', value: '2.50' },
       { label: '容积', unit: 'm3', value: '12.0' },
       { label: '下次检验', value: '2026-10-15' },
@@ -135,11 +117,7 @@ export const devices: DeviceInfo[] = [
     haloRadius: 0.8,
     name: '控制柜',
     parameters: [
-      { label: '通讯状态', status: 'normal', value: '在线' },
       { label: '采集点位', unit: '点', value: '18' },
-      { label: '柜内温度', status: 'normal', unit: '℃', value: '31.5' },
-      { label: 'PLC 负载', unit: '%', value: '36' },
-      { label: '网络延迟', unit: 'ms', value: '18' },
       { label: '供电状态', status: 'normal', value: '双路正常' },
     ],
     position: [-0.9, 2.65, 6],

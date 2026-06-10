@@ -1,9 +1,11 @@
 import DeviceMiniPreview from '@/components/DeviceMiniPreview'
+import type { DeviceTelemetrySnapshot } from '@/data/deviceTelemetry'
 import { devices, type DeviceCode, type DeviceStatus } from '@/data/workshopDevices'
 
 type DeviceDetailCardProps = {
   onClose: () => void
   selectedDeviceCode: DeviceCode | null
+  telemetryByDevice: DeviceTelemetrySnapshot
 }
 
 const statusMeta: Record<DeviceStatus, { className: string; label: string }> = {
@@ -29,14 +31,31 @@ function parameterValueClass(status?: DeviceStatus) {
   return 'text-cyan-50'
 }
 
-export default function DeviceDetailCard({ onClose, selectedDeviceCode }: DeviceDetailCardProps) {
+function rangeTrackClass(status?: DeviceStatus) {
+  if (status === 'alarm') {
+    return 'bg-rose-400'
+  }
+
+  if (status === 'warning') {
+    return 'bg-amber-300'
+  }
+
+  if (status === 'offline') {
+    return 'bg-slate-400'
+  }
+
+  return 'bg-cyan-300'
+}
+
+export default function DeviceDetailCard({ onClose, selectedDeviceCode, telemetryByDevice }: DeviceDetailCardProps) {
   const device = devices.find(({ code }) => code === selectedDeviceCode)
 
   if (!device) {
     return null
   }
 
-  const status = statusMeta[device.status]
+  const telemetry = telemetryByDevice[device.code]
+  const status = statusMeta[telemetry.status]
 
   return (
     <aside className="pointer-events-auto absolute bottom-5 right-5 top-5 z-10 flex w-[360px] max-w-[calc(100%-2.5rem)] flex-col overflow-hidden rounded-[8px] border border-cyan-300/18 bg-slate-950/84 text-slate-100 shadow-2xl shadow-slate-950/35 backdrop-blur opacity-90">
@@ -65,17 +84,67 @@ export default function DeviceDetailCard({ onClose, selectedDeviceCode }: Device
 
         <p className="m-0 text-sm leading-6 text-slate-300">{device.description}</p>
 
-        <div className="grid grid-cols-2 gap-2">
-          {device.parameters.map((parameter) => (
-            <div key={parameter.label} className="rounded-[6px] border border-white/10 bg-white/6 px-3 py-3">
-              <div className="text-xs font-semibold text-slate-400">{parameter.label}</div>
-              <div className={`mt-2 flex items-baseline gap-1 text-lg font-extrabold ${parameterValueClass(parameter.status)}`}>
-                <span className="min-w-0 truncate">{parameter.value}</span>
-                {parameter.unit ? <span className="text-xs font-bold text-slate-400">{parameter.unit}</span> : null}
+        <section className="grid gap-2">
+          <h3 className="m-0 text-sm font-bold text-slate-200">设备静态信息</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {device.parameters.map((parameter) => (
+              <div key={parameter.label} className="rounded-[6px] border border-white/10 bg-white/6 px-3 py-3">
+                <div className="text-xs font-semibold text-slate-400">{parameter.label}</div>
+                <div className={`mt-2 flex items-baseline gap-1 text-lg font-extrabold ${parameterValueClass(parameter.status)}`}>
+                  <span className="min-w-0 truncate">{parameter.value}</span>
+                  {parameter.unit ? <span className="text-xs font-bold text-slate-400">{parameter.unit}</span> : null}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
+        
+        <section className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <h3 className="m-0 text-sm font-bold text-cyan-100">实时运行数据</h3>
+            <span className="text-[11px] font-medium text-slate-400">每 2 秒更新</span>
+          </div>
+          <div className="grid gap-2">
+            {telemetry.parameters.map((parameter) => (
+              <div key={parameter.label} className="rounded-[6px] border border-cyan-300/16 bg-cyan-300/8 px-3 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-slate-400">{parameter.label}</div>
+                    <div className={`mt-2 flex items-baseline gap-1 text-lg font-extrabold ${parameterValueClass(parameter.status)}`}>
+                      <span className="min-w-0 truncate">{parameter.value}</span>
+                      {parameter.unit ? <span className="text-xs font-bold text-slate-400">{parameter.unit}</span> : null}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right text-[11px] font-medium leading-5 text-slate-400">
+                    <div>
+                      最小 {parameter.min}
+                      {parameter.unit ? ` ${parameter.unit}` : ''}
+                    </div>
+                    <div>
+                      最大 {parameter.max}
+                      {parameter.unit ? ` ${parameter.unit}` : ''}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="relative h-2 rounded-full bg-white/10">
+                    <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/20" />
+                    <div
+                      className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-950/70 shadow-[0_0_0_2px_rgba(15,23,42,0.32)] ${rangeTrackClass(parameter.status)}`}
+                      style={{ left: `${parameter.normalizedRatio * 100}%` }}
+                    />
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[11px] font-medium text-slate-500">
+                    <span>{parameter.min}</span>
+                    <span>当前 {parameter.value}</span>
+                    <span>{parameter.max}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
       </div>
     </aside>
   )
