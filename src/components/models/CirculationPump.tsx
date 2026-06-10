@@ -4,12 +4,14 @@ import { PressureGauge, Valve } from './ProcessFittings'
 import { equipmentMaterialConfig, labelStyleConfig } from './materialConfigs'
 
 type CirculationPumpProps = {
+  dimmed?: boolean
   position?: ThreeElements['group']['position']
   showLabels?: boolean
 }
 
 type InstrumentTagProps = {
   code: string
+  dimmed?: boolean
   position: ThreeElements['group']['position']
 }
 
@@ -66,7 +68,7 @@ function BaseBolt({ x, z }: { x: number; z: number }) {
   )
 }
 
-function InstrumentTag({ code, position }: InstrumentTagProps) {
+function InstrumentTag({ code, dimmed = false, position }: InstrumentTagProps) {
   return (
     <group position={position}>
       <Html center distanceFactor={labelStyleConfig.sizes.instrumentDistanceFactor} occlude>
@@ -82,6 +84,7 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1,
+            opacity: dimmed ? 0.2 : 1,
             padding: '4px 7px',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
@@ -94,7 +97,7 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
   )
 }
 
-function CirculationPump({ position = defaultPosition, showLabels = true }: CirculationPumpProps) {
+function CirculationPump({ dimmed = false, position = defaultPosition, showLabels = true }: CirculationPumpProps) {
   const fins = Array.from({ length: 9 }, (_, index) => -Math.PI * 0.72 + index * 0.18)
   const baseBolts = [
     [-0.62, -0.3],
@@ -161,7 +164,7 @@ function CirculationPump({ position = defaultPosition, showLabels = true }: Circ
       <Flange x={1.08} radius={0.24} />
       <Valve position={[1.44, 0.52, 0]} direction={[1, 0, 0]} />
       <PressureGauge position={[1.38, 0.82, 0]} />
-      {showLabels ? <InstrumentTag code="PG-103" position={[1.38, 1.58, 0.1]} /> : null}
+      {showLabels ? <InstrumentTag code="PG-103" dimmed={dimmed} position={[1.38, 1.58, 0.1]} /> : null}
       <mesh castShadow receiveShadow position={[0.38, 1.2, 0]}>
         <cylinderGeometry args={[0.22, 0.22, 0.08, 32]} />
         <meshStandardMaterial {...equipmentMaterialConfig.fittings.flange} />

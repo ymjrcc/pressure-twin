@@ -4,6 +4,7 @@ import { Flange, Transmitter } from './ProcessFittings'
 import { equipmentMaterialConfig, labelStyleConfig } from './materialConfigs'
 
 type VerticalStorageTankProps = {
+  dimmed?: boolean
   position?: ThreeElements['group']['position']
   rotation?: ThreeElements['group']['rotation']
   showLabels?: boolean
@@ -22,6 +23,7 @@ type BoltRingProps = {
 
 type InstrumentTagProps = {
   code: string
+  dimmed?: boolean
   position: ThreeElements['group']['position']
 }
 
@@ -146,11 +148,11 @@ function ReturnNozzle() {
   )
 }
 
-function TankInstruments({ showLabels }: { showLabels: boolean }) {
+function TankInstruments({ dimmed, showLabels }: { dimmed: boolean; showLabels: boolean }) {
   return (
     <group>
       <Transmitter position={[0.86, 2.55, 0.1]} rotation={[0, -Math.PI / 2, 0]} />
-      {showLabels ? <InstrumentTag code="LG-201" position={[1.18, 3.16, 0.18]} /> : null}
+      {showLabels ? <InstrumentTag code="LG-201" dimmed={dimmed} position={[1.18, 3.16, 0.18]} /> : null}
       <mesh castShadow receiveShadow position={[radius + 0.04, 2.05, 0.08]} rotation={[0, Math.PI / 2, 0]}>
         <cylinderGeometry args={[0.12, 0.12, 0.1, 24]} />
         <meshStandardMaterial color="#55636d" roughness={0.42} metalness={0.34} />
@@ -159,7 +161,7 @@ function TankInstruments({ showLabels }: { showLabels: boolean }) {
   )
 }
 
-function InstrumentTag({ code, position }: InstrumentTagProps) {
+function InstrumentTag({ code, dimmed = false, position }: InstrumentTagProps) {
   return (
     <group position={position}>
       <Html center distanceFactor={labelStyleConfig.sizes.instrumentDistanceFactor} occlude>
@@ -175,6 +177,7 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1,
+            opacity: dimmed ? 0.2 : 1,
             padding: '4px 7px',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
@@ -187,7 +190,7 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
   )
 }
 
-function LevelTransmitter({ showLabels }: { showLabels: boolean }) {
+function LevelTransmitter({ dimmed, showLabels }: { dimmed: boolean; showLabels: boolean }) {
   return (
     <group>
       <Transmitter position={[0, height + 0.455, 0]} />
@@ -195,7 +198,7 @@ function LevelTransmitter({ showLabels }: { showLabels: boolean }) {
         <cylinderGeometry args={[0.018, 0.018, 0.76, 10]} />
         <meshStandardMaterial color="#6b747a" roughness={0.32} metalness={0.52} />
       </mesh>
-      {showLabels ? <InstrumentTag code="LT-201" position={[0, height + 1.25, 0.12]} /> : null}
+      {showLabels ? <InstrumentTag code="LT-201" dimmed={dimmed} position={[0, height + 1.25, 0.12]} /> : null}
     </group>
   )
 }
@@ -335,7 +338,7 @@ function TankFoot({ angle }: { angle: number }) {
   )
 }
 
-function VerticalStorageTank({ position = defaultPosition, rotation, showLabels = true }: VerticalStorageTankProps) {
+function VerticalStorageTank({ dimmed = false, position = defaultPosition, rotation, showLabels = true }: VerticalStorageTankProps) {
   const footAngles = [Math.PI / 4, (Math.PI * 3) / 4, (Math.PI * 5) / 4, (Math.PI * 7) / 4]
 
   return (
@@ -392,10 +395,10 @@ function VerticalStorageTank({ position = defaultPosition, rotation, showLabels 
       <GuardRail />
       <TopNozzle />
       <BoltRing radius={0.34} y={height + 0.46} />
-      <LevelTransmitter showLabels={showLabels} />
+      <LevelTransmitter dimmed={dimmed} showLabels={showLabels} />
       <SideNozzle />
       <ReturnNozzle />
-      <TankInstruments showLabels={showLabels} />
+      <TankInstruments dimmed={dimmed} showLabels={showLabels} />
       <Manway />
       <Ladder />
 

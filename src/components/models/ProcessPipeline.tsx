@@ -21,7 +21,12 @@ type FlowParticlesProps = {
 
 type InstrumentTagProps = {
   code: string
+  dimmed?: boolean
   position: PipePoint
+}
+
+type ProcessPipelineProps = {
+  dimmed?: boolean
 }
 
 const segmentRadius = 0.1
@@ -262,7 +267,7 @@ function PipeRoute({ points }: PipeRoute) {
   )
 }
 
-function InstrumentTag({ code, position }: InstrumentTagProps) {
+function InstrumentTag({ code, dimmed = false, position }: InstrumentTagProps) {
   return (
     <group position={position}>
       <Html center distanceFactor={labelStyleConfig.sizes.instrumentDistanceFactor} occlude>
@@ -278,6 +283,7 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1,
+            opacity: dimmed ? 0.2 : 1,
             padding: '4px 7px',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
@@ -290,7 +296,7 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
   )
 }
 
-function ProcessPipeline() {
+function ProcessPipeline({ dimmed = false }: ProcessPipelineProps) {
   return (
     <group>
       {routes.map((route, index) => (
@@ -308,9 +314,13 @@ function ProcessPipeline() {
       {exchangerInstrumentSets.map(({ gauge, gaugeCode, transmitter, transmitterCode }, index) => (
         <group key={`exchanger-pipe-instruments-${index}`}>
           <PressureGauge position={gauge} />
-          <InstrumentTag code={gaugeCode} position={[gauge[0], gauge[1] + 0.76, gauge[2] + 0.1]} />
+          <InstrumentTag code={gaugeCode} dimmed={dimmed} position={[gauge[0], gauge[1] + 0.76, gauge[2] + 0.1]} />
           <Transmitter position={transmitter} />
-          <InstrumentTag code={transmitterCode} position={[transmitter[0], transmitter[1] + 0.66, transmitter[2] + 0.1]} />
+          <InstrumentTag
+            code={transmitterCode}
+            dimmed={dimmed}
+            position={[transmitter[0], transmitter[1] + 0.66, transmitter[2] + 0.1]}
+          />
         </group>
       ))}
     </group>

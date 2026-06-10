@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react'
-import { Canvas, type ThreeEvent } from '@react-three/fiber'
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react'
+import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
 import { AdaptiveDpr, AdaptiveEvents, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import { Group, Material, Mesh, Vector3 } from 'three'
 import DeviceDetailCard from '@/components/DeviceDetailCard'
 import WorkshopProcessFlow from '@/components/WorkshopProcessFlow'
 import WorkshopLegend from '@/components/WorkshopLegend'
@@ -21,6 +22,7 @@ import { devices, type DeviceCode } from '@/data/workshopDevices'
 type SelectableDeviceProps = {
   children: ReactNode
   code: DeviceCode
+  selectedDeviceCode: DeviceCode | null
   onSelect: (code: DeviceCode) => void
 }
 
@@ -29,7 +31,105 @@ type WorkshopSceneProps = {
   selectedDeviceCode: DeviceCode | null
 }
 
-function SelectableDevice({ children, code, onSelect }: SelectableDeviceProps) {
+type DimmableGroupProps = {
+  children: ReactNode
+  dimmed: boolean
+}
+
+type SelectionMaterialState = {
+  depthWrite: boolean
+  opacity: number
+  transparent: boolean
+}
+
+type SceneFocusTarget = {
+  distance: number
+  target: [number, number, number]
+}
+
+type CameraAnimation = {
+  duration: number
+  elapsed: number
+  fromPosition: Vector3
+  fromTarget: Vector3
+  toPosition: Vector3
+  toTarget: Vector3
+}
+
+type CameraFocusControllerProps = {
+  controlsRef: RefObject<ComponentRef<typeof OrbitControls> | null>
+  controlInteractionVersion: number
+  selectedDeviceCode: DeviceCode | null
+}
+
+const defaultCameraPosition = new Vector3(-8, 6.6, 15)
+const defaultControlsTarget = new Vector3(0.5, 1, -0.2)
+const deviceFocusTargets: Record<DeviceCode, SceneFocusTarget> = {
+  'CC-101': { distance: 10.5, target: [-0.9, 1.5, 5.55] },
+  'E-101': { distance: 11.5, target: [-3.4, 1.25, 1.5] },
+  'PU-101': { distance: 10.5, target: [1.6, 1, 1.8] },
+  'T-201': { distance: 12, target: [5.2, 2.3, 2.3] },
+  'V-101': { distance: 13, target: [-4.2, 1.85, -3.2] },
+  'V-102': { distance: 13, target: [2.6, 1.85, -3.2] },
+}
+
+function cloneMaterialsForSelection(root: RefObject<Group | null>) {
+  root.current?.traverse((object) => {
+    if (!(object instanceof Mesh)) {
+      return
+    }
+
+    if (Array.isArray(object.material)) {
+      object.material = object.material.map((material) => material.clone())
+      return
+    }
+
+    object.material = object.material.clone()
+  })
+}
+
+function updateMaterialOpacity(material: Material, dimmed: boolean) {
+  const selectionState = (material.userData.selectionState ?? {
+    depthWrite: material.depthWrite,
+    opacity: material.opacity,
+    transparent: material.transparent,
+  }) as SelectionMaterialState
+
+  material.userData.selectionState = selectionState
+  material.transparent = dimmed || selectionState.transparent
+  material.opacity = dimmed ? selectionState.opacity * 0.2 : selectionState.opacity
+  material.depthWrite = dimmed ? false : selectionState.depthWrite
+  material.needsUpdate = true
+}
+
+function DimmableGroup({ children, dimmed }: DimmableGroupProps) {
+  const groupRef = useRef<Group>(null)
+
+  useEffect(() => {
+    cloneMaterialsForSelection(groupRef)
+  }, [])
+
+  useEffect(() => {
+    groupRef.current?.traverse((object) => {
+      if (!(object instanceof Mesh)) {
+        return
+      }
+
+      const materials = Array.isArray(object.material) ? object.material : [object.material]
+      materials.forEach((material) => updateMaterialOpacity(material, dimmed))
+    })
+  }, [dimmed])
+
+  return (
+    <group ref={groupRef}>
+      {children}
+    </group>
+  )
+}
+
+function SelectableDevice({ children, code, onSelect, selectedDeviceCode }: SelectableDeviceProps) {
+  const dimmed = selectedDeviceCode !== null && selectedDeviceCode !== code
+
   return (
     <group
       onClick={(event: ThreeEvent<MouseEvent>) => {
@@ -37,9 +137,73 @@ function SelectableDevice({ children, code, onSelect }: SelectableDeviceProps) {
         onSelect(code)
       }}
     >
-      {children}
+      <DimmableGroup dimmed={dimmed}>{children}</DimmableGroup>
     </group>
   )
+}
+
+function CameraFocusController({ controlsRef, controlInteractionVersion, selectedDeviceCode }: CameraFocusControllerProps) {
+  const focusTarget = selectedDeviceCode ? deviceFocusTargets[selectedDeviceCode] : null
+  const animationRef = useRef<CameraAnimation | null>(null)
+  const previousSelectedDeviceRef = useRef<DeviceCode | null>(null)
+  const cameraTarget = useMemo(() => new Vector3(), [])
+  const controlsTarget = useMemo(() => new Vector3(), [])
+
+  useEffect(() => {
+    animationRef.current = null
+  }, [controlInteractionVersion])
+
+  useFrame(({ camera }, delta) => {
+    const controls = controlsRef.current
+    const selectedDeviceChanged = previousSelectedDeviceRef.current !== selectedDeviceCode
+
+    if (selectedDeviceChanged) {
+      previousSelectedDeviceRef.current = selectedDeviceCode
+
+      if (focusTarget) {
+        controlsTarget.fromArray(focusTarget.target)
+        const direction = camera.position.clone().sub(controlsTarget).normalize()
+        cameraTarget.copy(controlsTarget).addScaledVector(direction, focusTarget.distance)
+      } else {
+        controlsTarget.copy(defaultControlsTarget)
+        cameraTarget.copy(defaultCameraPosition)
+      }
+
+      animationRef.current = {
+        duration: 0.82,
+        elapsed: 0,
+        fromPosition: camera.position.clone(),
+        fromTarget: controls?.target.clone() ?? defaultControlsTarget.clone(),
+        toPosition: cameraTarget.clone(),
+        toTarget: controlsTarget.clone(),
+      }
+    }
+
+    const animation = animationRef.current
+
+    if (!animation) {
+      return
+    }
+
+    animation.elapsed = Math.min(animation.elapsed + delta, animation.duration)
+    const progress = animation.elapsed / animation.duration
+    const easedProgress = 1 - Math.pow(1 - progress, 3)
+
+    camera.position.lerpVectors(animation.fromPosition, animation.toPosition, easedProgress)
+
+    if (controls) {
+      controls.target.lerpVectors(animation.fromTarget, animation.toTarget, easedProgress)
+      controls.update()
+    }
+
+    camera.updateProjectionMatrix()
+
+    if (progress >= 1) {
+      animationRef.current = null
+    }
+  })
+
+  return null
 }
 
 function WorkshopScene({ onSelectDevice, selectedDeviceCode }: WorkshopSceneProps) {
@@ -63,27 +227,41 @@ function WorkshopScene({ onSelectDevice, selectedDeviceCode }: WorkshopSceneProp
 
       <IndustrialYard />
       <Factory />
-      <ScalePerson position={[-7.2, 0, -5.4]} />
-      <SelectableDevice code="T-201" onSelect={onSelectDevice}>
-        <VerticalStorageTank position={[5.2, 0, 2.3]} rotation={[0, 0, 0]} />
+      <DimmableGroup dimmed={selectedDeviceCode !== null}>
+        <ScalePerson position={[-7.2, 0, -5.4]} />
+      </DimmableGroup>
+      <SelectableDevice code="T-201" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+        <VerticalStorageTank dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'T-201'} position={[5.2, 0, 2.3]} rotation={[0, 0, 0]} />
       </SelectableDevice>
-      <SelectableDevice code="V-101" onSelect={onSelectDevice}>
-        <HorizontalPressureVessel position={[-4.2, 0, -3.2]} instrumentSuffix="101" />
+      <SelectableDevice code="V-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+        <HorizontalPressureVessel
+          dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'V-101'}
+          position={[-4.2, 0, -3.2]}
+          instrumentSuffix="101"
+        />
       </SelectableDevice>
-      <SelectableDevice code="V-102" onSelect={onSelectDevice}>
-        <HorizontalPressureVessel position={[2.6, 0, -3.2]} instrumentSuffix="102" />
+      <SelectableDevice code="V-102" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+        <HorizontalPressureVessel
+          dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'V-102'}
+          position={[2.6, 0, -3.2]}
+          instrumentSuffix="102"
+        />
       </SelectableDevice>
-      <SelectableDevice code="E-101" onSelect={onSelectDevice}>
+      <SelectableDevice code="E-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
         <HeatExchanger position={[-3.4, 0, 1.5]} />
       </SelectableDevice>
-      <SelectableDevice code="PU-101" onSelect={onSelectDevice}>
-        <CirculationPump position={[1.6, 0, 1.8]} />
+      <SelectableDevice code="PU-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+        <CirculationPump dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'PU-101'} position={[1.6, 0, 1.8]} />
       </SelectableDevice>
-      <SelectableDevice code="CC-101" onSelect={onSelectDevice}>
+      <SelectableDevice code="CC-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
         <ControlCabinet position={[-0.9, 0, 5.55]} rotation={[0, 0, 0]} />
       </SelectableDevice>
-      <ProcessPipeline />
-      <SignalLines />
+      <DimmableGroup dimmed={selectedDeviceCode !== null}>
+        <ProcessPipeline dimmed={selectedDeviceCode !== null} />
+      </DimmableGroup>
+      <DimmableGroup dimmed={selectedDeviceCode !== null}>
+        <SignalLines />
+      </DimmableGroup>
       <DeviceSelectionHalo selectedDeviceCode={selectedDeviceCode} />
       <ContactShadows
         position={[0, 0.012, 0]}
@@ -96,7 +274,12 @@ function WorkshopScene({ onSelectDevice, selectedDeviceCode }: WorkshopSceneProp
       />
 
       {devices.map((device) => (
-        <DeviceLabel key={device.code} code={device.code} position={device.position} />
+        <DeviceLabel
+          key={device.code}
+          code={device.code}
+          dimmed={selectedDeviceCode !== null && selectedDeviceCode !== device.code}
+          position={device.position}
+        />
       ))}
     </>
   )
@@ -105,6 +288,8 @@ function WorkshopScene({ onSelectDevice, selectedDeviceCode }: WorkshopSceneProp
 export default function Home() {
   const [isProcessFlowOpen, setIsProcessFlowOpen] = useState(false)
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<DeviceCode | null>(null)
+  const [controlInteractionVersion, setControlInteractionVersion] = useState(0)
+  const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const toggleSelectedDevice = (code: DeviceCode) => {
     setSelectedDeviceCode((currentCode) => (currentCode === code ? null : code))
   }
@@ -122,7 +307,13 @@ export default function Home() {
           onSelectDevice={toggleSelectedDevice}
           selectedDeviceCode={selectedDeviceCode}
         />
+        <CameraFocusController
+          controlsRef={controlsRef}
+          controlInteractionVersion={controlInteractionVersion}
+          selectedDeviceCode={selectedDeviceCode}
+        />
         <OrbitControls
+          ref={controlsRef}
           makeDefault
           target={[0.5, 1, -0.2]}
           minDistance={2.4}
@@ -130,6 +321,7 @@ export default function Home() {
           maxPolarAngle={Math.PI / 2.05}
           enableDamping
           dampingFactor={0.08}
+          onStart={() => setControlInteractionVersion((version) => version + 1)}
         />
         <AdaptiveDpr pixelated />
         <AdaptiveEvents />

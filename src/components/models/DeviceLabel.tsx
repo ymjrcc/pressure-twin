@@ -2,9 +2,11 @@ import { Html } from '@react-three/drei'
 import type { DeviceInfo } from '@/data/workshopDevices'
 import { labelStyleConfig } from './materialConfigs'
 
-type DeviceLabelProps = Pick<DeviceInfo, 'code' | 'position'>
+type DeviceLabelProps = Pick<DeviceInfo, 'code' | 'position'> & {
+  dimmed?: boolean
+}
 
-export default function DeviceLabel({ code, position }: DeviceLabelProps) {
+export default function DeviceLabel({ code, dimmed = false, position }: DeviceLabelProps) {
   return (
     <group position={position}>
       <Html center distanceFactor={labelStyleConfig.sizes.deviceDistanceFactor} occlude>
@@ -24,6 +26,7 @@ export default function DeviceLabel({ code, position }: DeviceLabelProps) {
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1,
+            opacity: dimmed ? 0.2 : 1,
             padding: '5px 8px',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',

@@ -4,6 +4,7 @@ import { Flange, PressureGauge, SafetyValve, Transmitter } from './ProcessFittin
 import { equipmentMaterialConfig, labelStyleConfig } from './materialConfigs'
 
 type HorizontalPressureVesselProps = {
+  dimmed?: boolean
   instrumentSuffix?: string
   position?: ThreeElements['group']['position']
   showLabels?: boolean
@@ -21,6 +22,7 @@ type ShellRingProps = {
 
 type InstrumentTagProps = {
   code: string
+  dimmed?: boolean
   position: ThreeElements['group']['position']
 }
 
@@ -152,7 +154,7 @@ function Nameplate() {
   )
 }
 
-function InstrumentTag({ code, position }: InstrumentTagProps) {
+function InstrumentTag({ code, dimmed = false, position }: InstrumentTagProps) {
   return (
     <group position={position}>
       <Html center distanceFactor={labelStyleConfig.sizes.instrumentDistanceFactor} occlude>
@@ -168,6 +170,7 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
             fontWeight: 800,
             letterSpacing: 0,
             lineHeight: 1,
+            opacity: dimmed ? 0.2 : 1,
             padding: '4px 7px',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
@@ -180,19 +183,19 @@ function InstrumentTag({ code, position }: InstrumentTagProps) {
   )
 }
 
-function VesselInstruments({ showLabels, suffix }: { showLabels: boolean; suffix: string }) {
+function VesselInstruments({ dimmed, showLabels, suffix }: { dimmed: boolean; showLabels: boolean; suffix: string }) {
   const topY = shellCenterY + radius
 
   return (
     <group>
       <PressureGauge position={[-1.9, topY, 0]} />
-      {showLabels ? <InstrumentTag code={`PG-${suffix}`} position={[-1.9, topY + 0.94, 0.12]} /> : null}
+      {showLabels ? <InstrumentTag code={`PG-${suffix}`} dimmed={dimmed} position={[-1.9, topY + 0.94, 0.12]} /> : null}
 
       <Transmitter position={[0, topY, 0.03]} />
-      {showLabels ? <InstrumentTag code={`PT-${suffix}`} position={[0, topY + 0.79, 0.12]} /> : null}
+      {showLabels ? <InstrumentTag code={`PT-${suffix}`} dimmed={dimmed} position={[0, topY + 0.79, 0.12]} /> : null}
 
       <SafetyValve position={[1.9, topY, 0]} />
-      {showLabels ? <InstrumentTag code={`PSV-${suffix}`} position={[1.9, topY + 0.98, 0.12]} /> : null}
+      {showLabels ? <InstrumentTag code={`PSV-${suffix}`} dimmed={dimmed} position={[1.9, topY + 0.98, 0.12]} /> : null}
 
       <Flange position={[-halfLength - 0.36, shellCenterY, 0]} direction={[1, 0, 0]} radius={0.25} />
       <Flange position={[halfLength + 0.36, shellCenterY, 0]} direction={[1, 0, 0]} radius={0.25} />
@@ -200,7 +203,7 @@ function VesselInstruments({ showLabels, suffix }: { showLabels: boolean; suffix
   )
 }
 
-function HorizontalPressureVessel({ instrumentSuffix = '101', position = defaultPosition, showLabels = true }: HorizontalPressureVesselProps) {
+function HorizontalPressureVessel({ dimmed = false, instrumentSuffix = '101', position = defaultPosition, showLabels = true }: HorizontalPressureVesselProps) {
   return (
     <group position={position}>
       <mesh castShadow receiveShadow position={[0, shellCenterY, 0]} rotation={[0, 0, Math.PI / 2]}>
@@ -225,7 +228,7 @@ function HorizontalPressureVessel({ instrumentSuffix = '101', position = default
 
       <Manway />
       <Nameplate />
-      <VesselInstruments showLabels={showLabels} suffix={instrumentSuffix} />
+      <VesselInstruments dimmed={dimmed} showLabels={showLabels} suffix={instrumentSuffix} />
 
       <Saddle x={-1.85} />
       <Saddle x={1.85} />
