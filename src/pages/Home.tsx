@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react'
+import { Button } from 'antd'
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
 import { AdaptiveDpr, AdaptiveEvents, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei'
-import { Group, Material, Mesh, Vector3 } from 'three'
+import { SlidersHorizontal, Workflow } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Color, Group, Material, Mesh, Vector3 } from 'three'
 import DeviceDetailCard from '@/components/DeviceDetailCard'
+import TelemetryControlPanel from '@/components/TelemetryControlPanel'
 import WorkshopProcessFlow from '@/components/WorkshopProcessFlow'
 import WorkshopLegend from '@/components/WorkshopLegend'
 import CirculationPump from '@/components/models/CirculationPump'
@@ -17,22 +21,28 @@ import ProcessPipeline from '@/components/models/ProcessPipeline'
 import ScalePerson from '@/components/models/ScalePerson'
 import SignalLines from '@/components/models/SignalLines'
 import VerticalStorageTank from '@/components/models/VerticalStorageTank'
-import { devices, type DeviceCode } from '@/data/workshopDevices'
+import type { DeviceTelemetrySnapshot } from '@/data/deviceTelemetry'
+import { devices, type DeviceCode, type DeviceStatus } from '@/data/workshopDevices'
 import { useDeviceTelemetry } from '@/hooks/useDeviceTelemetry'
 
+type AbnormalDeviceStatuses = Partial<Record<DeviceCode, Exclude<DeviceStatus, 'normal'>>>
+
 type SelectableDeviceProps = {
+  alertStatus?: Exclude<DeviceStatus, 'normal'>
   children: ReactNode
   code: DeviceCode
-  selectedDeviceCode: DeviceCode | null
   onSelect: (code: DeviceCode) => void
+  selectedDeviceCode: DeviceCode | null
 }
 
 type WorkshopSceneProps = {
+  abnormalDeviceStatuses: AbnormalDeviceStatuses
   onSelectDevice: (code: DeviceCode) => void
   selectedDeviceCode: DeviceCode | null
 }
 
 type DimmableGroupProps = {
+  alertStatus?: Exclude<DeviceStatus, 'normal'>
   children: ReactNode
   dimmed: boolean
 }
@@ -41,6 +51,18 @@ type SelectionMaterialState = {
   depthWrite: boolean
   opacity: number
   transparent: boolean
+}
+
+type AlertMaterialState = {
+  color?: Color
+  emissive?: Color
+  emissiveIntensity?: number
+}
+
+type ColorableMaterial = Material & {
+  color?: Color
+  emissive?: Color
+  emissiveIntensity?: number
 }
 
 type SceneFocusTarget = {
@@ -73,6 +95,26 @@ const deviceFocusTargets: Record<DeviceCode, SceneFocusTarget> = {
   'V-101': { distance: 13, target: [-4.2, 1.85, -3.2] },
   'V-102': { distance: 13, target: [2.6, 1.85, -3.2] },
 }
+const alertColorConfig: Record<Exclude<DeviceStatus, 'normal'>, { color: Color; emissive: Color; highIntensity: number; lowIntensity: number }> = {
+  alarm: {
+    color: new Color('#ef4444'),
+    emissive: new Color('#7f1d1d'),
+    highIntensity: 0.62,
+    lowIntensity: 0.18,
+  },
+  offline: {
+    color: new Color('#cbd5e1'),
+    emissive: new Color('#64748b'),
+    highIntensity: 0.24,
+    lowIntensity: 0.06,
+  },
+  warning: {
+    color: new Color('#f97316'),
+    emissive: new Color('#9a3412'),
+    highIntensity: 0.52,
+    lowIntensity: 0.14,
+  },
+}
 
 function cloneMaterialsForSelection(root: RefObject<Group | null>) {
   root.current?.traverse((object) => {
@@ -89,37 +131,99 @@ function cloneMaterialsForSelection(root: RefObject<Group | null>) {
   })
 }
 
-function updateMaterialOpacity(material: Material, dimmed: boolean) {
+function updateMaterialAppearance(
+  material: Material,
+  dimmed: boolean,
+  alertStatus: Exclude<DeviceStatus, 'normal'> | undefined,
+  alertVisible: boolean,
+) {
   const selectionState = (material.userData.selectionState ?? {
     depthWrite: material.depthWrite,
     opacity: material.opacity,
     transparent: material.transparent,
   }) as SelectionMaterialState
+  const colorableMaterial = material as ColorableMaterial
+  const alertState = (material.userData.alertState ?? {
+    color: colorableMaterial.color?.clone(),
+    emissive: colorableMaterial.emissive?.clone(),
+    emissiveIntensity: colorableMaterial.emissiveIntensity,
+  }) as AlertMaterialState
 
   material.userData.selectionState = selectionState
+  material.userData.alertState = alertState
+
+  if (alertStatus) {
+    const alertColor = alertColorConfig[alertStatus]
+
+    colorableMaterial.color?.copy(alertColor.color)
+    colorableMaterial.emissive?.copy(alertColor.emissive)
+
+    if (colorableMaterial.emissiveIntensity !== undefined) {
+      colorableMaterial.emissiveIntensity = alertVisible ? alertColor.highIntensity : alertColor.lowIntensity
+    }
+
+    material.transparent = true
+    material.opacity = (alertVisible ? 0.96 : 0.16) * (dimmed ? 0.65 : 1)
+    material.depthWrite = alertVisible
+    material.needsUpdate = true
+    return
+  }
+
+  if (alertState.color) {
+    colorableMaterial.color?.copy(alertState.color)
+  }
+
+  if (alertState.emissive) {
+    colorableMaterial.emissive?.copy(alertState.emissive)
+  }
+
+  if (alertState.emissiveIntensity !== undefined) {
+    colorableMaterial.emissiveIntensity = alertState.emissiveIntensity
+  }
+
   material.transparent = dimmed || selectionState.transparent
   material.opacity = dimmed ? selectionState.opacity * 0.2 : selectionState.opacity
   material.depthWrite = dimmed ? false : selectionState.depthWrite
   material.needsUpdate = true
 }
 
-function DimmableGroup({ children, dimmed }: DimmableGroupProps) {
+function DimmableGroup({ alertStatus, children, dimmed }: DimmableGroupProps) {
   const groupRef = useRef<Group>(null)
+  const alertVisibleRef = useRef(true)
 
-  useEffect(() => {
-    cloneMaterialsForSelection(groupRef)
-  }, [])
-
-  useEffect(() => {
+  const updateGroupMaterials = useCallback((alertVisible: boolean) => {
     groupRef.current?.traverse((object) => {
       if (!(object instanceof Mesh)) {
         return
       }
 
       const materials = Array.isArray(object.material) ? object.material : [object.material]
-      materials.forEach((material) => updateMaterialOpacity(material, dimmed))
+      materials.forEach((material) => updateMaterialAppearance(material, dimmed, alertStatus, alertVisible))
     })
-  }, [dimmed])
+  }, [alertStatus, dimmed])
+
+  useEffect(() => {
+    cloneMaterialsForSelection(groupRef)
+  }, [])
+
+  useEffect(() => {
+    updateGroupMaterials(alertVisibleRef.current)
+  }, [updateGroupMaterials])
+
+  useFrame(({ clock }) => {
+    if (!alertStatus) {
+      return
+    }
+
+    const nextAlertVisible = Math.floor(clock.elapsedTime) % 2 === 0
+
+    if (nextAlertVisible === alertVisibleRef.current) {
+      return
+    }
+
+    alertVisibleRef.current = nextAlertVisible
+    updateGroupMaterials(nextAlertVisible)
+  })
 
   return (
     <group ref={groupRef}>
@@ -128,7 +232,7 @@ function DimmableGroup({ children, dimmed }: DimmableGroupProps) {
   )
 }
 
-function SelectableDevice({ children, code, onSelect, selectedDeviceCode }: SelectableDeviceProps) {
+function SelectableDevice({ alertStatus, children, code, onSelect, selectedDeviceCode }: SelectableDeviceProps) {
   const dimmed = selectedDeviceCode !== null && selectedDeviceCode !== code
 
   return (
@@ -138,7 +242,7 @@ function SelectableDevice({ children, code, onSelect, selectedDeviceCode }: Sele
         onSelect(code)
       }}
     >
-      <DimmableGroup dimmed={dimmed}>{children}</DimmableGroup>
+      <DimmableGroup alertStatus={alertStatus} dimmed={dimmed}>{children}</DimmableGroup>
     </group>
   )
 }
@@ -207,7 +311,7 @@ function CameraFocusController({ controlsRef, controlInteractionVersion, selecte
   return null
 }
 
-function WorkshopScene({ onSelectDevice, selectedDeviceCode }: WorkshopSceneProps) {
+function WorkshopScene({ abnormalDeviceStatuses, onSelectDevice, selectedDeviceCode }: WorkshopSceneProps) {
   return (
     <>
       <color attach="background" args={['#dbe7ec']} />
@@ -231,30 +335,60 @@ function WorkshopScene({ onSelectDevice, selectedDeviceCode }: WorkshopSceneProp
       <DimmableGroup dimmed={selectedDeviceCode !== null}>
         <ScalePerson position={[-7.2, 0, -5.4]} />
       </DimmableGroup>
-      <SelectableDevice code="T-201" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+      <SelectableDevice
+        alertStatus={abnormalDeviceStatuses['T-201']}
+        code="T-201"
+        onSelect={onSelectDevice}
+        selectedDeviceCode={selectedDeviceCode}
+      >
         <VerticalStorageTank dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'T-201'} position={[5.2, 0, 2.3]} rotation={[0, 0, 0]} />
       </SelectableDevice>
-      <SelectableDevice code="V-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+      <SelectableDevice
+        alertStatus={abnormalDeviceStatuses['V-101']}
+        code="V-101"
+        onSelect={onSelectDevice}
+        selectedDeviceCode={selectedDeviceCode}
+      >
         <HorizontalPressureVessel
           dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'V-101'}
           position={[-4.2, 0, -3.2]}
           instrumentSuffix="101"
         />
       </SelectableDevice>
-      <SelectableDevice code="V-102" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+      <SelectableDevice
+        alertStatus={abnormalDeviceStatuses['V-102']}
+        code="V-102"
+        onSelect={onSelectDevice}
+        selectedDeviceCode={selectedDeviceCode}
+      >
         <HorizontalPressureVessel
           dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'V-102'}
           position={[2.6, 0, -3.2]}
           instrumentSuffix="102"
         />
       </SelectableDevice>
-      <SelectableDevice code="E-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+      <SelectableDevice
+        alertStatus={abnormalDeviceStatuses['E-101']}
+        code="E-101"
+        onSelect={onSelectDevice}
+        selectedDeviceCode={selectedDeviceCode}
+      >
         <HeatExchanger position={[-3.4, 0, 1.5]} />
       </SelectableDevice>
-      <SelectableDevice code="PU-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+      <SelectableDevice
+        alertStatus={abnormalDeviceStatuses['PU-101']}
+        code="PU-101"
+        onSelect={onSelectDevice}
+        selectedDeviceCode={selectedDeviceCode}
+      >
         <CirculationPump dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'PU-101'} position={[1.6, 0, 1.8]} />
       </SelectableDevice>
-      <SelectableDevice code="CC-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
+      <SelectableDevice
+        alertStatus={abnormalDeviceStatuses['CC-101']}
+        code="CC-101"
+        onSelect={onSelectDevice}
+        selectedDeviceCode={selectedDeviceCode}
+      >
         <ControlCabinet position={[-0.9, 0, 5.55]} rotation={[0, 0, 0]} />
       </SelectableDevice>
       <DimmableGroup dimmed={selectedDeviceCode !== null}>
@@ -286,11 +420,27 @@ function WorkshopScene({ onSelectDevice, selectedDeviceCode }: WorkshopSceneProp
   )
 }
 
+function getAbnormalDeviceStatuses(telemetryByDevice: DeviceTelemetrySnapshot): AbnormalDeviceStatuses {
+  return Object.fromEntries(
+    Object.entries(telemetryByDevice)
+      .filter(([, telemetry]) => telemetry.status !== 'normal')
+      .map(([deviceCode, telemetry]) => [deviceCode, telemetry.status]),
+  ) as AbnormalDeviceStatuses
+}
+
 export default function Home() {
   const [isProcessFlowOpen, setIsProcessFlowOpen] = useState(false)
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<DeviceCode | null>(null)
   const [controlInteractionVersion, setControlInteractionVersion] = useState(0)
-  const telemetryByDevice = useDeviceTelemetry(2000)
+  const {
+    clearAllOverrides,
+    clearOverride,
+    overrides,
+    setDeviceOverride,
+    setParameterOverride,
+    telemetryByDevice,
+  } = useDeviceTelemetry(2000)
+  const abnormalDeviceStatuses = useMemo(() => getAbnormalDeviceStatuses(telemetryByDevice), [telemetryByDevice])
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const toggleSelectedDevice = (code: DeviceCode) => {
     setSelectedDeviceCode((currentCode) => (currentCode === code ? null : code))
@@ -306,6 +456,7 @@ export default function Home() {
       >
         <PerspectiveCamera makeDefault position={[-8, 6.6, 15]} fov={48} />
         <WorkshopScene
+          abnormalDeviceStatuses={abnormalDeviceStatuses}
           onSelectDevice={toggleSelectedDevice}
           selectedDeviceCode={selectedDeviceCode}
         />
@@ -328,22 +479,51 @@ export default function Home() {
         <AdaptiveDpr pixelated />
         <AdaptiveEvents />
       </Canvas>
-      <div className="absolute bottom-5 left-5 z-10 max-h-[calc(100%-2.5rem)] max-w-[calc(100%-2.5rem)] overflow-y-auto">
-        <WorkshopLegend
-          onOpenProcessFlow={() => setIsProcessFlowOpen(true)}
-          selectedDeviceCode={selectedDeviceCode}
-        />
-      </div>
-      {isProcessFlowOpen ? (
-        <div
-          className="absolute inset-0 z-[2147483647] grid place-items-center bg-slate-950/24 px-4 py-6 backdrop-blur-[1px]"
-          onClick={() => setIsProcessFlowOpen(false)}
-        >
-          <div onClick={(event) => event.stopPropagation()}>
-            <WorkshopProcessFlow onClose={() => setIsProcessFlowOpen(false)} />
-          </div>
+      <div className="absolute bottom-5 left-5 z-10 flex max-h-[calc(100%-2.5rem)] max-w-[calc(100%-2.5rem)] flex-col gap-3 overflow-y-auto">
+        <div className="pointer-events-auto flex flex-wrap gap-2">
+          <TelemetryControlPanel
+            clearAllOverrides={clearAllOverrides}
+            clearOverride={clearOverride}
+            overrides={overrides}
+            renderTrigger={({ openPanel }) => (
+              <Button
+                className="h-9 rounded-[6px] border-rose-300/38 bg-slate-900/84 px-3 text-sm font-bold text-rose-100 shadow-lg shadow-slate-950/20 backdrop-blur hover:!border-rose-200/70 hover:!bg-rose-400/18 hover:!text-white"
+                icon={<SlidersHorizontal size={16} strokeWidth={2.3} />}
+                onClick={openPanel}
+                type="default"
+              >
+                模拟预警
+              </Button>
+            )}
+            selectedDeviceCode={selectedDeviceCode}
+            setDeviceOverride={setDeviceOverride}
+            setParameterOverride={setParameterOverride}
+            telemetryByDevice={telemetryByDevice}
+          />
+          <Button
+            className="h-9 rounded-[6px] border-cyan-300/32 bg-slate-900/84 px-3 text-sm font-bold text-cyan-100 shadow-lg shadow-slate-950/20 backdrop-blur hover:!border-cyan-200/70 hover:!bg-cyan-300/16 hover:!text-white"
+            icon={<Workflow size={16} strokeWidth={2.3} />}
+            onClick={() => setIsProcessFlowOpen(true)}
+            type="default"
+          >
+            工艺流程
+          </Button>
         </div>
-      ) : null}
+        <WorkshopLegend selectedDeviceCode={selectedDeviceCode} />
+      </div>
+      {isProcessFlowOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[2147483647] grid place-items-center bg-slate-950/24 px-4 py-6 backdrop-blur-[1px]"
+              onClick={() => setIsProcessFlowOpen(false)}
+            >
+              <div onClick={(event) => event.stopPropagation()}>
+                <WorkshopProcessFlow onClose={() => setIsProcessFlowOpen(false)} />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
       <DeviceDetailCard
         selectedDeviceCode={selectedDeviceCode}
         telemetryByDevice={telemetryByDevice}
