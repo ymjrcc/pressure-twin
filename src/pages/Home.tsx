@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode, type RefObject } from 'react'
 import { Button } from 'antd'
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
 import { AdaptiveDpr, AdaptiveEvents, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { SlidersHorizontal, Workflow } from 'lucide-react'
 import { createPortal } from 'react-dom'
-import { Color, Group, Material, Mesh, Vector3 } from 'three'
+import { Group, Material, Mesh, Vector3 } from 'three'
 import DeviceDetailCard from '@/components/DeviceDetailCard'
 import TelemetryControlPanel from '@/components/TelemetryControlPanel'
 import WorkshopProcessFlow from '@/components/WorkshopProcessFlow'
@@ -28,7 +28,6 @@ import { useDeviceTelemetry } from '@/hooks/useDeviceTelemetry'
 type AbnormalDeviceStatuses = Partial<Record<DeviceCode, Exclude<DeviceStatus, 'normal'>>>
 
 type SelectableDeviceProps = {
-  alertStatus?: Exclude<DeviceStatus, 'normal'>
   children: ReactNode
   code: DeviceCode
   onSelect: (code: DeviceCode) => void
@@ -42,7 +41,6 @@ type WorkshopSceneProps = {
 }
 
 type DimmableGroupProps = {
-  alertStatus?: Exclude<DeviceStatus, 'normal'>
   children: ReactNode
   dimmed: boolean
 }
@@ -51,18 +49,6 @@ type SelectionMaterialState = {
   depthWrite: boolean
   opacity: number
   transparent: boolean
-}
-
-type AlertMaterialState = {
-  color?: Color
-  emissive?: Color
-  emissiveIntensity?: number
-}
-
-type ColorableMaterial = Material & {
-  color?: Color
-  emissive?: Color
-  emissiveIntensity?: number
 }
 
 type SceneFocusTarget = {
@@ -95,26 +81,6 @@ const deviceFocusTargets: Record<DeviceCode, SceneFocusTarget> = {
   'V-101': { distance: 13, target: [-4.2, 1.85, -3.2] },
   'V-102': { distance: 13, target: [2.6, 1.85, -3.2] },
 }
-const alertColorConfig: Record<Exclude<DeviceStatus, 'normal'>, { color: Color; emissive: Color; highIntensity: number; lowIntensity: number }> = {
-  alarm: {
-    color: new Color('#ef4444'),
-    emissive: new Color('#7f1d1d'),
-    highIntensity: 0.62,
-    lowIntensity: 0.18,
-  },
-  offline: {
-    color: new Color('#cbd5e1'),
-    emissive: new Color('#64748b'),
-    highIntensity: 0.24,
-    lowIntensity: 0.06,
-  },
-  warning: {
-    color: new Color('#f97316'),
-    emissive: new Color('#9a3412'),
-    highIntensity: 0.52,
-    lowIntensity: 0.14,
-  },
-}
 
 function cloneMaterialsForSelection(root: RefObject<Group | null>) {
   root.current?.traverse((object) => {
@@ -131,99 +97,37 @@ function cloneMaterialsForSelection(root: RefObject<Group | null>) {
   })
 }
 
-function updateMaterialAppearance(
-  material: Material,
-  dimmed: boolean,
-  alertStatus: Exclude<DeviceStatus, 'normal'> | undefined,
-  alertVisible: boolean,
-) {
+function updateMaterialOpacity(material: Material, dimmed: boolean) {
   const selectionState = (material.userData.selectionState ?? {
     depthWrite: material.depthWrite,
     opacity: material.opacity,
     transparent: material.transparent,
   }) as SelectionMaterialState
-  const colorableMaterial = material as ColorableMaterial
-  const alertState = (material.userData.alertState ?? {
-    color: colorableMaterial.color?.clone(),
-    emissive: colorableMaterial.emissive?.clone(),
-    emissiveIntensity: colorableMaterial.emissiveIntensity,
-  }) as AlertMaterialState
 
   material.userData.selectionState = selectionState
-  material.userData.alertState = alertState
-
-  if (alertStatus) {
-    const alertColor = alertColorConfig[alertStatus]
-
-    colorableMaterial.color?.copy(alertColor.color)
-    colorableMaterial.emissive?.copy(alertColor.emissive)
-
-    if (colorableMaterial.emissiveIntensity !== undefined) {
-      colorableMaterial.emissiveIntensity = alertVisible ? alertColor.highIntensity : alertColor.lowIntensity
-    }
-
-    material.transparent = true
-    material.opacity = (alertVisible ? 0.96 : 0.16) * (dimmed ? 0.65 : 1)
-    material.depthWrite = alertVisible
-    material.needsUpdate = true
-    return
-  }
-
-  if (alertState.color) {
-    colorableMaterial.color?.copy(alertState.color)
-  }
-
-  if (alertState.emissive) {
-    colorableMaterial.emissive?.copy(alertState.emissive)
-  }
-
-  if (alertState.emissiveIntensity !== undefined) {
-    colorableMaterial.emissiveIntensity = alertState.emissiveIntensity
-  }
-
   material.transparent = dimmed || selectionState.transparent
   material.opacity = dimmed ? selectionState.opacity * 0.2 : selectionState.opacity
   material.depthWrite = dimmed ? false : selectionState.depthWrite
   material.needsUpdate = true
 }
 
-function DimmableGroup({ alertStatus, children, dimmed }: DimmableGroupProps) {
+function DimmableGroup({ children, dimmed }: DimmableGroupProps) {
   const groupRef = useRef<Group>(null)
-  const alertVisibleRef = useRef(true)
-
-  const updateGroupMaterials = useCallback((alertVisible: boolean) => {
-    groupRef.current?.traverse((object) => {
-      if (!(object instanceof Mesh)) {
-        return
-      }
-
-      const materials = Array.isArray(object.material) ? object.material : [object.material]
-      materials.forEach((material) => updateMaterialAppearance(material, dimmed, alertStatus, alertVisible))
-    })
-  }, [alertStatus, dimmed])
 
   useEffect(() => {
     cloneMaterialsForSelection(groupRef)
   }, [])
 
   useEffect(() => {
-    updateGroupMaterials(alertVisibleRef.current)
-  }, [updateGroupMaterials])
+    groupRef.current?.traverse((object) => {
+      if (!(object instanceof Mesh)) {
+        return
+      }
 
-  useFrame(({ clock }) => {
-    if (!alertStatus) {
-      return
-    }
-
-    const nextAlertVisible = Math.floor(clock.elapsedTime) % 2 === 0
-
-    if (nextAlertVisible === alertVisibleRef.current) {
-      return
-    }
-
-    alertVisibleRef.current = nextAlertVisible
-    updateGroupMaterials(nextAlertVisible)
-  })
+      const materials = Array.isArray(object.material) ? object.material : [object.material]
+      materials.forEach((material) => updateMaterialOpacity(material, dimmed))
+    })
+  }, [dimmed])
 
   return (
     <group ref={groupRef}>
@@ -232,7 +136,7 @@ function DimmableGroup({ alertStatus, children, dimmed }: DimmableGroupProps) {
   )
 }
 
-function SelectableDevice({ alertStatus, children, code, onSelect, selectedDeviceCode }: SelectableDeviceProps) {
+function SelectableDevice({ children, code, onSelect, selectedDeviceCode }: SelectableDeviceProps) {
   const dimmed = selectedDeviceCode !== null && selectedDeviceCode !== code
 
   return (
@@ -242,7 +146,7 @@ function SelectableDevice({ alertStatus, children, code, onSelect, selectedDevic
         onSelect(code)
       }}
     >
-      <DimmableGroup alertStatus={alertStatus} dimmed={dimmed}>{children}</DimmableGroup>
+      <DimmableGroup dimmed={dimmed}>{children}</DimmableGroup>
     </group>
   )
 }
@@ -335,60 +239,30 @@ function WorkshopScene({ abnormalDeviceStatuses, onSelectDevice, selectedDeviceC
       <DimmableGroup dimmed={selectedDeviceCode !== null}>
         <ScalePerson position={[-7.2, 0, -5.4]} />
       </DimmableGroup>
-      <SelectableDevice
-        alertStatus={abnormalDeviceStatuses['T-201']}
-        code="T-201"
-        onSelect={onSelectDevice}
-        selectedDeviceCode={selectedDeviceCode}
-      >
+      <SelectableDevice code="T-201" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
         <VerticalStorageTank dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'T-201'} position={[5.2, 0, 2.3]} rotation={[0, 0, 0]} />
       </SelectableDevice>
-      <SelectableDevice
-        alertStatus={abnormalDeviceStatuses['V-101']}
-        code="V-101"
-        onSelect={onSelectDevice}
-        selectedDeviceCode={selectedDeviceCode}
-      >
+      <SelectableDevice code="V-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
         <HorizontalPressureVessel
           dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'V-101'}
           position={[-4.2, 0, -3.2]}
           instrumentSuffix="101"
         />
       </SelectableDevice>
-      <SelectableDevice
-        alertStatus={abnormalDeviceStatuses['V-102']}
-        code="V-102"
-        onSelect={onSelectDevice}
-        selectedDeviceCode={selectedDeviceCode}
-      >
+      <SelectableDevice code="V-102" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
         <HorizontalPressureVessel
           dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'V-102'}
           position={[2.6, 0, -3.2]}
           instrumentSuffix="102"
         />
       </SelectableDevice>
-      <SelectableDevice
-        alertStatus={abnormalDeviceStatuses['E-101']}
-        code="E-101"
-        onSelect={onSelectDevice}
-        selectedDeviceCode={selectedDeviceCode}
-      >
+      <SelectableDevice code="E-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
         <HeatExchanger position={[-3.4, 0, 1.5]} />
       </SelectableDevice>
-      <SelectableDevice
-        alertStatus={abnormalDeviceStatuses['PU-101']}
-        code="PU-101"
-        onSelect={onSelectDevice}
-        selectedDeviceCode={selectedDeviceCode}
-      >
+      <SelectableDevice code="PU-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
         <CirculationPump dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'PU-101'} position={[1.6, 0, 1.8]} />
       </SelectableDevice>
-      <SelectableDevice
-        alertStatus={abnormalDeviceStatuses['CC-101']}
-        code="CC-101"
-        onSelect={onSelectDevice}
-        selectedDeviceCode={selectedDeviceCode}
-      >
+      <SelectableDevice code="CC-101" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
         <ControlCabinet position={[-0.9, 0, 5.55]} rotation={[0, 0, 0]} />
       </SelectableDevice>
       <DimmableGroup dimmed={selectedDeviceCode !== null}>
@@ -397,7 +271,7 @@ function WorkshopScene({ abnormalDeviceStatuses, onSelectDevice, selectedDeviceC
       <DimmableGroup dimmed={selectedDeviceCode !== null}>
         <SignalLines />
       </DimmableGroup>
-      <DeviceSelectionHalo selectedDeviceCode={selectedDeviceCode} />
+      <DeviceSelectionHalo abnormalDeviceStatuses={abnormalDeviceStatuses} selectedDeviceCode={selectedDeviceCode} />
       <ContactShadows
         position={[0, 0.012, 0]}
         opacity={0.36}
@@ -481,6 +355,14 @@ export default function Home() {
       </Canvas>
       <div className="absolute bottom-5 left-5 z-10 flex max-h-[calc(100%-2.5rem)] max-w-[calc(100%-2.5rem)] flex-col gap-3 overflow-y-auto">
         <div className="pointer-events-auto flex flex-wrap gap-2">
+          <Button
+            className="h-9 rounded-[6px] border-cyan-300/32 bg-slate-900/84 px-3 text-sm font-bold text-cyan-100 shadow-lg shadow-slate-950/20 backdrop-blur hover:!border-cyan-200/70 hover:!bg-cyan-300/16 hover:!text-white"
+            icon={<Workflow size={16} strokeWidth={2.3} />}
+            onClick={() => setIsProcessFlowOpen(true)}
+            type="default"
+          >
+            工艺流程
+          </Button>
           <TelemetryControlPanel
             clearAllOverrides={clearAllOverrides}
             clearOverride={clearOverride}
@@ -500,14 +382,6 @@ export default function Home() {
             setParameterOverride={setParameterOverride}
             telemetryByDevice={telemetryByDevice}
           />
-          <Button
-            className="h-9 rounded-[6px] border-cyan-300/32 bg-slate-900/84 px-3 text-sm font-bold text-cyan-100 shadow-lg shadow-slate-950/20 backdrop-blur hover:!border-cyan-200/70 hover:!bg-cyan-300/16 hover:!text-white"
-            icon={<Workflow size={16} strokeWidth={2.3} />}
-            onClick={() => setIsProcessFlowOpen(true)}
-            type="default"
-          >
-            工艺流程
-          </Button>
         </div>
         <WorkshopLegend selectedDeviceCode={selectedDeviceCode} />
       </div>

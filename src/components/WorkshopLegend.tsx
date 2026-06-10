@@ -37,7 +37,7 @@ export default function WorkshopLegend({ selectedDeviceCode }: WorkshopLegendPro
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
         <div className="col-span-2 text-[11px] font-bold uppercase text-cyan-300">仪表</div>
         {instruments.map((instrument) => (
-          <div key={instrument.code} className="grid grid-cols-[58px_1fr] items-center gap-2">
+          <div key={instrument.code} className="grid grid-cols-[64px_1fr] items-center gap-2">
             <span className="rounded-[4px] border border-white/20 bg-white/8 px-2 py-1 text-[11px] font-extrabold leading-none text-white">
               {instrument.code}
             </span>
