@@ -130,7 +130,7 @@ export default function Home() {
                 onClick={openPanel}
                 type="default"
               >
-                模拟预警
+                异常模拟
               </Button>
             )}
             selectedDeviceCode={activeSelectedDeviceCode}

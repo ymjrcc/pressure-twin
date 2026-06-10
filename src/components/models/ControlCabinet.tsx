@@ -94,10 +94,27 @@ function ControlCabinet({ position = defaultPosition, rotation }: ControlCabinet
         <boxGeometry args={[0.9, 1.68, 0.04]} />
         <meshStandardMaterial {...equipmentMaterialConfig.cabinet.door} />
       </mesh>
-      <mesh castShadow receiveShadow position={[0, 1.13, 0.292]}>
-        <boxGeometry args={[0.96, 1.74, 0.018]} />
-        <meshStandardMaterial color="#33414b" roughness={0.52} metalness={0.2} wireframe />
-      </mesh>
+      <group position={[0, 1.13, 0.305]}>
+        <mesh castShadow receiveShadow position={[0, 0.87, 0]}>
+          <boxGeometry args={[0.96, 0.018, 0.018]} />
+          <meshStandardMaterial color="#33414b" roughness={0.52} metalness={0.2} />
+        </mesh>
+
+        <mesh castShadow receiveShadow position={[0, -0.87, 0]}>
+          <boxGeometry args={[0.96, 0.018, 0.018]} />
+          <meshStandardMaterial color="#33414b" roughness={0.52} metalness={0.2} />
+        </mesh>
+
+        <mesh castShadow receiveShadow position={[-0.48, 0, 0]}>
+          <boxGeometry args={[0.018, 1.74, 0.018]} />
+          <meshStandardMaterial color="#33414b" roughness={0.52} metalness={0.2} />
+        </mesh>
+
+        <mesh castShadow receiveShadow position={[0.48, 0, 0]}>
+          <boxGeometry args={[0.018, 1.74, 0.018]} />
+          <meshStandardMaterial color="#33414b" roughness={0.52} metalness={0.2} />
+        </mesh>
+      </group>
       <mesh castShadow receiveShadow position={[0, 1.13, 0.272]}>
         <boxGeometry args={[0.02, 1.58, 0.028]} />
         <meshStandardMaterial {...trimMaterial} />
