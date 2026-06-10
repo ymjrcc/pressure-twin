@@ -78,6 +78,31 @@ function rangeTrackClass(status?: DeviceStatus) {
   return 'bg-cyan-300'
 }
 
+function formatAlarmStartedAt(timestamp: number) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    hour12: false,
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(timestamp)
+}
+
+function formatAlarmDuration(durationMs: number) {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000))
+  const seconds = totalSeconds % 60
+  const totalMinutes = Math.floor(totalSeconds / 60)
+  const minutes = totalMinutes % 60
+  const hours = Math.floor(totalMinutes / 60)
+  const paddedSeconds = seconds.toString().padStart(2, '0')
+  const paddedMinutes = minutes.toString().padStart(2, '0')
+
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${paddedMinutes}:${paddedSeconds}`
+  }
+
+  return `${paddedMinutes}:${paddedSeconds}`
+}
+
 export default function DeviceDetailCard({ onClose, selectedDeviceCode, telemetryByDevice }: DeviceDetailCardProps) {
   const device = devices.find(({ code }) => code === selectedDeviceCode)
 
@@ -118,7 +143,7 @@ export default function DeviceDetailCard({ onClose, selectedDeviceCode, telemetr
         <p className="m-0 text-sm leading-6 text-slate-300">{device.description}</p>
 
         <section className="grid gap-2">
-          <h3 className="m-0 text-sm font-bold text-slate-200">设备静态信息</h3>
+          <h3 className="m-0 text-sm font-bold text-slate-200">设备信息</h3>
           <div className="grid grid-cols-2 gap-2">
             {device.parameters.map((parameter) => (
               <div key={parameter.label} className={`rounded-[6px] border px-3 py-3 ${cardTone.panelClassName}`}>
@@ -134,7 +159,7 @@ export default function DeviceDetailCard({ onClose, selectedDeviceCode, telemetr
         
         <section className="grid gap-2">
           <div className="flex items-center justify-between">
-            <h3 className={`m-0 text-sm font-bold ${cardTone.accentClassName}`}>实时运行数据</h3>
+            <h3 className={`m-0 text-sm font-bold ${cardTone.accentClassName}`}>实时数据</h3>
             <span className="text-[11px] font-medium text-slate-400">每 2 秒更新</span>
           </div>
           <div className="grid gap-2">
@@ -173,6 +198,24 @@ export default function DeviceDetailCard({ onClose, selectedDeviceCode, telemetr
                     <span>{parameter.max}</span>
                   </div>
                 </div>
+                {parameter.status === 'alarm' && parameter.alarmStartedAt !== undefined ? (
+                  <div className="mt-3 grid gap-2 rounded-[6px] border border-rose-200/18 bg-rose-400/10 px-3 py-2">
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-bold leading-5">
+                      <div>
+                        <div className="text-slate-400">报警时间</div>
+                        <div className="text-rose-100">{formatAlarmStartedAt(parameter.alarmStartedAt)}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400">持续时间</div>
+                        <div className="text-rose-100">{formatAlarmDuration(parameter.alarmDurationMs ?? 0)}</div>
+                      </div>
+                    </div>
+                    <div className="text-[11px] font-semibold leading-5 text-slate-300">
+                      <span className="font-bold text-rose-100">处置建议：</span>
+                      {parameter.alarmSuggestion}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

@@ -1,6 +1,9 @@
 import type { DeviceCode, DeviceStatus } from './workshopDevices'
 
 export type TelemetryParameter = {
+  alarmDurationMs?: number
+  alarmStartedAt?: number
+  alarmSuggestion?: string
   key: string
   label: string
   max: string
@@ -30,12 +33,15 @@ export type DeviceTelemetryOverride = {
 
 export type DeviceTelemetryOverrides = Partial<Record<DeviceCode, DeviceTelemetryOverride>>
 
+export type TelemetryAlarmStartedAtByParameter = Record<string, number>
+
 export type TelemetryThreshold = {
   alarm?: number
   warning?: number
 }
 
 export type TelemetryMetricConfig = {
+  alarmSuggestion?: string
   alarmText?: string
   baseValue: number
   key: string
@@ -67,9 +73,16 @@ const statusPriority: Record<DeviceStatus, number> = {
   normal: 0,
 }
 
+const fallbackAlarmSuggestion = '请立即核对现场仪表状态，必要时降低负荷并通知值班人员处置。'
+
+export function getTelemetryAlarmKey(deviceCode: DeviceCode, parameterKey: string) {
+  return `${deviceCode}:${parameterKey}`
+}
+
 export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]> = {
   'T-201': [
     {
+      alarmSuggestion: '检查进出料阀位与液位联锁，必要时切换至手动补排液控制。',
       baseValue: 68,
       key: 'level',
       label: '液位',
@@ -81,6 +94,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: '%',
     },
     {
+      alarmSuggestion: '核对压力变送器与安全阀状态，必要时降低进料压力并泄压。',
       baseValue: 0.42,
       key: 'pressure',
       label: '罐内压力',
@@ -92,6 +106,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: 'MPa',
     },
     {
+      alarmSuggestion: '检查换热介质流量与温控阀开度，必要时降低储罐热负荷。',
       baseValue: 38.6,
       key: 'temperature',
       label: '介质温度',
@@ -105,6 +120,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
   ],
   'PU-101': [
     {
+      alarmSuggestion: '检查泵出口阀位、旁路与联锁状态，必要时降低泵频率。',
       baseValue: 0.78,
       key: 'outletPressure',
       label: '出口压力',
@@ -116,6 +132,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: 'MPa',
     },
     {
+      alarmSuggestion: '检查入口过滤器和管线阀位，确认无堵塞或汽蚀风险。',
       baseValue: 42.5,
       key: 'flow',
       label: '流量',
@@ -127,6 +144,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: 'm3/h',
     },
     {
+      alarmSuggestion: '检查轴承润滑与冷却状态，必要时切换备用泵。',
       baseValue: 54.2,
       key: 'bearingTemperature',
       label: '轴承温度',
@@ -138,6 +156,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: '℃',
     },
     {
+      alarmSuggestion: '检查泵体基础、联轴器和轴承状态，必要时停泵检修。',
       baseValue: 1.8,
       key: 'vibration',
       label: '振动',
@@ -151,6 +170,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
   ],
   'E-101': [
     {
+      alarmSuggestion: '检查热源侧调节阀和入口温控回路，必要时降低热负荷。',
       baseValue: 92.4,
       key: 'inletTemperature',
       label: '入口温度',
@@ -162,6 +182,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: '℃',
     },
     {
+      alarmSuggestion: '核对出口温度趋势与冷却介质流量，必要时调整换热负荷。',
       baseValue: 73.8,
       key: 'outletTemperature',
       label: '出口温度',
@@ -173,6 +194,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: '℃',
     },
     {
+      alarmSuggestion: '检查壳程压力控制阀与排凝状态，必要时旁路降压。',
       baseValue: 0.64,
       key: 'shellPressure',
       label: '壳程压力',
@@ -184,6 +206,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: 'MPa',
     },
     {
+      alarmSuggestion: '检查管程入口压力与堵塞风险，必要时切换旁路或降流量。',
       baseValue: 0.58,
       key: 'tubePressure',
       label: '管程压力',
@@ -195,6 +218,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: 'MPa',
     },
     {
+      alarmSuggestion: '检查换热器结垢、流量分配和温差，安排清洗或降负荷运行。',
       baseValue: 82,
       key: 'efficiency',
       label: '换热效率',
@@ -208,6 +232,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
   ],
   'V-101': [
     {
+      alarmSuggestion: '核对压力表和变送器读数，检查安全阀前后阀位并准备泄压。',
       baseValue: 0.86,
       key: 'workingPressure',
       label: '工作压力',
@@ -219,6 +244,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: 'MPa',
     },
     {
+      alarmSuggestion: '检查容器伴热、冷却与介质循环状态，必要时降低工艺温度。',
       baseValue: 46.3,
       key: 'workingTemperature',
       label: '工作温度',
@@ -232,6 +258,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
   ],
   'V-102': [
     {
+      alarmSuggestion: '核对压力表和变送器读数，检查安全阀前后阀位并准备泄压。',
       baseValue: 0.82,
       key: 'workingPressure',
       label: '工作压力',
@@ -243,6 +270,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: 'MPa',
     },
     {
+      alarmSuggestion: '检查容器伴热、冷却与介质循环状态，必要时降低工艺温度。',
       baseValue: 44.9,
       key: 'workingTemperature',
       label: '工作温度',
@@ -256,6 +284,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
   ],
   'CC-101': [
     {
+      alarmSuggestion: '检查柜内空调、风扇和门封状态，必要时切换备用散热。',
       baseValue: 31.5,
       key: 'cabinetTemperature',
       label: '柜内温度',
@@ -267,6 +296,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: '℃',
     },
     {
+      alarmSuggestion: '检查控制程序负载与通讯任务，必要时切换控制器或降采样频率。',
       baseValue: 36,
       key: 'plcLoad',
       label: 'PLC 负载',
@@ -278,6 +308,7 @@ export const telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
       unit: '%',
     },
     {
+      alarmSuggestion: '检查交换机端口、网线和上位机链路，必要时切换冗余网络。',
       baseValue: 18,
       key: 'networkLatency',
       label: '网络延迟',
@@ -313,6 +344,7 @@ export function createTelemetrySnapshot(
   runtime: DeviceTelemetryRuntime,
   overrides: DeviceTelemetryOverrides = {},
   updatedAt = Date.now(),
+  alarmStartedAtByParameter: TelemetryAlarmStartedAtByParameter = {},
 ): DeviceTelemetrySnapshot {
   return Object.fromEntries(
     Object.entries(telemetryMetricConfigs).map(([deviceCode, configs]) => {
@@ -323,8 +355,16 @@ export function createTelemetrySnapshot(
         const overrideStatus = override?.parameters?.[config.key] ?? override?.device
         const displayValue = overrideStatus ? getOverrideMetricValue(config, overrideStatus) : value
         const status = overrideStatus ?? getMetricStatus(value, config)
+        const alarmStartedAt = alarmStartedAtByParameter[getTelemetryAlarmKey(deviceCode as DeviceCode, config.key)]
 
         return {
+          ...(status === 'alarm' && alarmStartedAt !== undefined
+            ? {
+                alarmDurationMs: Math.max(0, updatedAt - alarmStartedAt),
+                alarmStartedAt,
+                alarmSuggestion: config.alarmSuggestion ?? fallbackAlarmSuggestion,
+              }
+            : {}),
           key: config.key,
           label: config.label,
           max: formatMetricValue(config.max, config.precision),
