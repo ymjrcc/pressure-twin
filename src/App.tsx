@@ -24,7 +24,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
+      <nav className="bg-white shadow-sm hidden">
         <div className="px-4">
           <div className="flex justify-between h-16">
             <div className="flex">
