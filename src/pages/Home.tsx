@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode
 import { Button } from 'antd'
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber'
 import { AdaptiveDpr, AdaptiveEvents, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei'
-import { SlidersHorizontal, Workflow } from 'lucide-react'
+import { ClipboardCheck, LoaderCircle, SlidersHorizontal, Workflow, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { Group, Material, Mesh, Vector3 } from 'three'
 import DeviceDetailCard from '@/components/DeviceDetailCard'
+import DeviceInspectionPanel from '@/components/DeviceInspectionPanel'
+import InspectionReportDialog from '@/components/InspectionReportDialog'
 import TelemetryControlPanel from '@/components/TelemetryControlPanel'
 import WorkshopProcessFlow from '@/components/WorkshopProcessFlow'
 import WorkshopLegend from '@/components/WorkshopLegend'
@@ -22,7 +24,16 @@ import ScalePerson from '@/components/models/ScalePerson'
 import SignalLines from '@/components/models/SignalLines'
 import VerticalStorageTank from '@/components/models/VerticalStorageTank'
 import type { DeviceTelemetrySnapshot } from '@/data/deviceTelemetry'
-import { devices, type DeviceCode, type DeviceStatus } from '@/data/workshopDevices'
+import {
+  devices,
+  inspectionChecklists,
+  inspectionPersonTargets,
+  type DeviceCode,
+  type DeviceInspectionRecord,
+  type DeviceStatus,
+  type InspectionItemResult,
+  type InspectionSession,
+} from '@/data/workshopDevices'
 import { useDeviceTelemetry } from '@/hooks/useDeviceTelemetry'
 
 type AbnormalDeviceStatuses = Partial<Record<DeviceCode, Exclude<DeviceStatus, 'normal'>>>
@@ -36,6 +47,7 @@ type SelectableDeviceProps = {
 
 type WorkshopSceneProps = {
   abnormalDeviceStatuses: AbnormalDeviceStatuses
+  inspectionPersonTarget: [number, number, number] | null
   onSelectDevice: (code: DeviceCode) => void
   selectedDeviceCode: DeviceCode | null
 }
@@ -71,6 +83,7 @@ type CameraFocusControllerProps = {
   selectedDeviceCode: DeviceCode | null
 }
 
+const defaultScalePersonPosition: [number, number, number] = [-7.2, 0, -5.4]
 const defaultCameraPosition = new Vector3(-8, 6.6, 15)
 const defaultControlsTarget = new Vector3(0.5, 1, -0.2)
 const deviceFocusTargets: Record<DeviceCode, SceneFocusTarget> = {
@@ -80,6 +93,28 @@ const deviceFocusTargets: Record<DeviceCode, SceneFocusTarget> = {
   'T-201': { distance: 12, target: [5.2, 2.3, 2.3] },
   'V-101': { distance: 13, target: [-4.2, 1.85, -3.2] },
   'V-102': { distance: 13, target: [2.6, 1.85, -3.2] },
+}
+
+function createInspectionSession(): InspectionSession {
+  return {
+    currentDeviceIndex: 0,
+    records: Object.fromEntries(
+      devices.map((device) => [
+        device.code,
+        {
+          deviceCode: device.code,
+          itemResults: {},
+          note: '',
+        } satisfies DeviceInspectionRecord,
+      ]),
+    ) as Record<DeviceCode, DeviceInspectionRecord>,
+    startedAt: Date.now(),
+    status: 'running',
+  }
+}
+
+function isDeviceInspectionComplete(record: DeviceInspectionRecord, deviceCode: DeviceCode) {
+  return inspectionChecklists[deviceCode].every((item) => record.itemResults[item.id])
 }
 
 function cloneMaterialsForSelection(root: RefObject<Group | null>) {
@@ -132,6 +167,34 @@ function DimmableGroup({ children, dimmed }: DimmableGroupProps) {
   return (
     <group ref={groupRef}>
       {children}
+    </group>
+  )
+}
+
+function MovingScalePerson({ targetPosition }: { targetPosition: [number, number, number] }) {
+  const groupRef = useRef<Group>(null)
+  const targetVector = useMemo(() => new Vector3(), [])
+
+  useEffect(() => {
+    if (!groupRef.current) {
+      return
+    }
+
+    groupRef.current.position.fromArray(defaultScalePersonPosition)
+  }, [])
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) {
+      return
+    }
+
+    targetVector.fromArray(targetPosition)
+    groupRef.current.position.lerp(targetVector, Math.min(1, delta * 2.8))
+  })
+
+  return (
+    <group ref={groupRef}>
+      <ScalePerson position={[0, 0, 0]} />
     </group>
   )
 }
@@ -215,7 +278,7 @@ function CameraFocusController({ controlsRef, controlInteractionVersion, selecte
   return null
 }
 
-function WorkshopScene({ abnormalDeviceStatuses, onSelectDevice, selectedDeviceCode }: WorkshopSceneProps) {
+function WorkshopScene({ abnormalDeviceStatuses, inspectionPersonTarget, onSelectDevice, selectedDeviceCode }: WorkshopSceneProps) {
   return (
     <>
       <color attach="background" args={['#dbe7ec']} />
@@ -236,8 +299,8 @@ function WorkshopScene({ abnormalDeviceStatuses, onSelectDevice, selectedDeviceC
 
       <IndustrialYard />
       <Factory />
-      <DimmableGroup dimmed={selectedDeviceCode !== null}>
-        <ScalePerson position={[-7.2, 0, -5.4]} />
+      <DimmableGroup dimmed={selectedDeviceCode !== null && !inspectionPersonTarget}>
+        <MovingScalePerson targetPosition={inspectionPersonTarget ?? defaultScalePersonPosition} />
       </DimmableGroup>
       <SelectableDevice code="T-201" onSelect={onSelectDevice} selectedDeviceCode={selectedDeviceCode}>
         <VerticalStorageTank dimmed={selectedDeviceCode !== null && selectedDeviceCode !== 'T-201'} position={[5.2, 0, 2.3]} rotation={[0, 0, 0]} />
@@ -304,6 +367,8 @@ function getAbnormalDeviceStatuses(telemetryByDevice: DeviceTelemetrySnapshot): 
 
 export default function Home() {
   const [isProcessFlowOpen, setIsProcessFlowOpen] = useState(false)
+  const [inspectionSession, setInspectionSession] = useState<InspectionSession | null>(null)
+  const [isGeneratingInspectionReport, setIsGeneratingInspectionReport] = useState(false)
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<DeviceCode | null>(null)
   const [controlInteractionVersion, setControlInteractionVersion] = useState(0)
   const {
@@ -316,8 +381,154 @@ export default function Home() {
   } = useDeviceTelemetry(2000)
   const abnormalDeviceStatuses = useMemo(() => getAbnormalDeviceStatuses(telemetryByDevice), [telemetryByDevice])
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
+  const inspectionReportTimerRef = useRef<number | null>(null)
+  const runningInspectionSession = inspectionSession?.status === 'running' ? inspectionSession : null
+  const isInspectionRunning = Boolean(runningInspectionSession)
+  const currentInspectionDevice = runningInspectionSession ? devices[runningInspectionSession.currentDeviceIndex] : null
+  const currentInspectionRecord = currentInspectionDevice && runningInspectionSession ? runningInspectionSession.records[currentInspectionDevice.code] : null
+  const inspectionPersonTarget = currentInspectionDevice ? inspectionPersonTargets[currentInspectionDevice.code] : null
+  const activeSelectedDeviceCode = currentInspectionDevice?.code ?? selectedDeviceCode
+
+  useEffect(() => {
+    return () => {
+      if (inspectionReportTimerRef.current !== null) {
+        window.clearTimeout(inspectionReportTimerRef.current)
+      }
+    }
+  }, [])
+
   const toggleSelectedDevice = (code: DeviceCode) => {
+    if (isInspectionRunning) {
+      return
+    }
+
     setSelectedDeviceCode((currentCode) => (currentCode === code ? null : code))
+  }
+  const startInspection = () => {
+    if (inspectionReportTimerRef.current !== null) {
+      window.clearTimeout(inspectionReportTimerRef.current)
+      inspectionReportTimerRef.current = null
+    }
+
+    setIsGeneratingInspectionReport(false)
+    setInspectionSession(createInspectionSession())
+  }
+  const cancelInspection = () => {
+    if (inspectionReportTimerRef.current !== null) {
+      window.clearTimeout(inspectionReportTimerRef.current)
+      inspectionReportTimerRef.current = null
+    }
+
+    setIsGeneratingInspectionReport(false)
+    setInspectionSession(null)
+    setSelectedDeviceCode(null)
+  }
+  const updateInspectionItemResult = (deviceCode: DeviceCode, itemId: string, result: InspectionItemResult) => {
+    setInspectionSession((session) => {
+      if (!session || session.status !== 'running') {
+        return session
+      }
+
+      const record = session.records[deviceCode]
+
+      return {
+        ...session,
+        records: {
+          ...session.records,
+          [deviceCode]: {
+            ...record,
+            checkedAt: Date.now(),
+            itemResults: {
+              ...record.itemResults,
+              [itemId]: result,
+            },
+          },
+        },
+      }
+    })
+  }
+  const updateInspectionNote = (deviceCode: DeviceCode, note: string) => {
+    setInspectionSession((session) => {
+      if (!session || session.status !== 'running') {
+        return session
+      }
+
+      const record = session.records[deviceCode]
+
+      return {
+        ...session,
+        records: {
+          ...session.records,
+          [deviceCode]: {
+            ...record,
+            checkedAt: Date.now(),
+            note,
+          },
+        },
+      }
+    })
+  }
+  const goToPreviousInspectionDevice = () => {
+    setInspectionSession((session) => {
+      if (!session || session.status !== 'running') {
+        return session
+      }
+
+      return {
+        ...session,
+        currentDeviceIndex: Math.max(0, session.currentDeviceIndex - 1),
+      }
+    })
+  }
+  const goToNextInspectionDevice = () => {
+    setInspectionSession((session) => {
+      if (!session || session.status !== 'running') {
+        return session
+      }
+
+      const device = devices[session.currentDeviceIndex]
+      const record = session.records[device.code]
+
+      if (!isDeviceInspectionComplete(record, device.code)) {
+        return session
+      }
+
+      if (session.currentDeviceIndex === devices.length - 1) {
+        setIsGeneratingInspectionReport(true)
+        if (inspectionReportTimerRef.current !== null) {
+          window.clearTimeout(inspectionReportTimerRef.current)
+        }
+
+        inspectionReportTimerRef.current = window.setTimeout(() => {
+          setIsGeneratingInspectionReport(false)
+          inspectionReportTimerRef.current = null
+        }, 2000)
+
+        return {
+          ...session,
+          completedAt: Date.now(),
+          status: 'completed',
+        }
+      }
+
+      return {
+        ...session,
+        currentDeviceIndex: session.currentDeviceIndex + 1,
+      }
+    })
+  }
+  const closeInspectionReport = () => {
+    if (inspectionReportTimerRef.current !== null) {
+      window.clearTimeout(inspectionReportTimerRef.current)
+      inspectionReportTimerRef.current = null
+    }
+
+    setIsGeneratingInspectionReport(false)
+    setInspectionSession(null)
+    setSelectedDeviceCode(null)
+  }
+  const restartInspection = () => {
+    startInspection()
   }
 
   return (
@@ -326,18 +537,23 @@ export default function Home() {
         shadows
         dpr={[1, 2]}
         camera={{ position: [9.5, 6.6, 10.5], fov: 48 }}
-        onPointerMissed={() => setSelectedDeviceCode(null)}
+        onPointerMissed={() => {
+          if (!isInspectionRunning) {
+            setSelectedDeviceCode(null)
+          }
+        }}
       >
         <PerspectiveCamera makeDefault position={[-8, 6.6, 15]} fov={48} />
         <WorkshopScene
           abnormalDeviceStatuses={abnormalDeviceStatuses}
+          inspectionPersonTarget={inspectionPersonTarget}
           onSelectDevice={toggleSelectedDevice}
-          selectedDeviceCode={selectedDeviceCode}
+          selectedDeviceCode={activeSelectedDeviceCode}
         />
         <CameraFocusController
           controlsRef={controlsRef}
           controlInteractionVersion={controlInteractionVersion}
-          selectedDeviceCode={selectedDeviceCode}
+          selectedDeviceCode={activeSelectedDeviceCode}
         />
         <OrbitControls
           ref={controlsRef}
@@ -377,13 +593,25 @@ export default function Home() {
                 模拟预警
               </Button>
             )}
-            selectedDeviceCode={selectedDeviceCode}
+            selectedDeviceCode={activeSelectedDeviceCode}
             setDeviceOverride={setDeviceOverride}
             setParameterOverride={setParameterOverride}
             telemetryByDevice={telemetryByDevice}
           />
+          <Button
+            className={`h-9 rounded-[6px] px-3 text-sm font-bold shadow-lg shadow-slate-950/20 backdrop-blur ${
+              isInspectionRunning
+                ? 'border-rose-300/38 bg-slate-900/84 text-rose-100 hover:!border-rose-200/70 hover:!bg-rose-400/18 hover:!text-white'
+                : 'border-emerald-300/38 bg-slate-900/84 text-emerald-100 hover:!border-emerald-200/70 hover:!bg-emerald-300/16 hover:!text-white'
+            }`}
+            icon={isInspectionRunning ? <X size={16} strokeWidth={2.3} /> : <ClipboardCheck size={16} strokeWidth={2.3} />}
+            onClick={isInspectionRunning ? cancelInspection : startInspection}
+            type="default"
+          >
+            {isInspectionRunning ? '取消巡检' : '开始巡检'}
+          </Button>
         </div>
-        <WorkshopLegend selectedDeviceCode={selectedDeviceCode} />
+        <WorkshopLegend selectedDeviceCode={activeSelectedDeviceCode} />
       </div>
       {isProcessFlowOpen && typeof document !== 'undefined'
         ? createPortal(
@@ -398,11 +626,50 @@ export default function Home() {
             document.body,
           )
         : null}
-      <DeviceDetailCard
-        selectedDeviceCode={selectedDeviceCode}
-        telemetryByDevice={telemetryByDevice}
-        onClose={() => setSelectedDeviceCode(null)}
-      />
+      {runningInspectionSession && currentInspectionDevice && currentInspectionRecord ? (
+        <DeviceInspectionPanel
+          currentDeviceCode={currentInspectionDevice.code}
+          currentDeviceIndex={runningInspectionSession.currentDeviceIndex}
+          onGoNext={goToNextInspectionDevice}
+          onGoPrevious={goToPreviousInspectionDevice}
+          onSetItemResult={updateInspectionItemResult}
+          onSetNote={updateInspectionNote}
+          record={currentInspectionRecord}
+          totalDevices={devices.length}
+        />
+      ) : (
+        <DeviceDetailCard
+          selectedDeviceCode={activeSelectedDeviceCode}
+          telemetryByDevice={telemetryByDevice}
+          onClose={() => setSelectedDeviceCode(null)}
+        />
+      )}
+      {isGeneratingInspectionReport && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="fixed inset-0 z-[2147483647] grid place-items-center bg-slate-950/42 px-4 py-6 backdrop-blur-[2px]">
+              <div className="grid w-[360px] max-w-[calc(100vw-2rem)] justify-items-center gap-4 rounded-[8px] border border-cyan-200/18 bg-slate-950/92 px-6 py-7 text-center text-slate-100 shadow-2xl shadow-slate-950/40">
+                <div className="grid h-14 w-14 place-items-center rounded-full border border-cyan-200/20 bg-cyan-300/10">
+                  <LoaderCircle aria-hidden="true" className="animate-spin text-cyan-100" size={28} strokeWidth={2.2} />
+                </div>
+                <div>
+                  <div className="text-base font-extrabold text-white">正在生成巡检报告</div>
+                  <div className="mt-2 text-sm font-medium leading-6 text-slate-300">请稍候</div>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+      {inspectionSession?.status === 'completed' && !isGeneratingInspectionReport && typeof document !== 'undefined'
+        ? createPortal(
+            <InspectionReportDialog
+              session={inspectionSession}
+              onClose={closeInspectionReport}
+              onRestart={restartInspection}
+            />,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

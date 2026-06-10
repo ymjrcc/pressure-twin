@@ -62,7 +62,7 @@ export function useDeviceTelemetry(refreshMs = 2000): UseDeviceTelemetryResult {
   )
   const [overrides, setOverrides] = useState<DeviceTelemetryOverrides>({})
   const [telemetryByDevice, setTelemetryByDevice] = useState<DeviceTelemetrySnapshot>(() =>
-    createTrackedTelemetrySnapshot(initialRuntime, {}),
+    createTelemetrySnapshot(initialRuntime, {}, Date.now(), {}),
   )
 
   useEffect(() => {

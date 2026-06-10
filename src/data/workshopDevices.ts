@@ -4,6 +4,29 @@ export type DeviceStatus = 'normal' | 'warning' | 'alarm' | 'offline'
 
 export type DeviceThumbnailType = 'tank' | 'pump' | 'exchanger' | 'vessel' | 'cabinet'
 
+export type InspectionItemResult = 'normal' | 'abnormal'
+
+export type InspectionItem = {
+  description: string
+  id: string
+  label: string
+}
+
+export type DeviceInspectionRecord = {
+  checkedAt?: number
+  deviceCode: DeviceCode
+  itemResults: Record<string, InspectionItemResult | undefined>
+  note: string
+}
+
+export type InspectionSession = {
+  completedAt?: number
+  currentDeviceIndex: number
+  records: Record<DeviceCode, DeviceInspectionRecord>
+  startedAt: number
+  status: 'idle' | 'running' | 'completed'
+}
+
 export type StaticDeviceParameter = {
   label: string
   status?: DeviceStatus
@@ -125,6 +148,60 @@ export const devices: DeviceInfo[] = [
     thumbnailType: 'cabinet',
   },
 ]
+
+export const inspectionChecklists: Record<DeviceCode, InspectionItem[]> = {
+  'T-201': [
+    { description: '确认液位计、液位变送器读数稳定且无卡滞。', id: 'level', label: '液位状态' },
+    { description: '核对罐内压力表和变送器读数，无超限趋势。', id: 'pressure', label: '压力监测' },
+    { description: '检查进出口阀门开度、手轮和阀杆状态。', id: 'valves', label: '阀门状态' },
+    { description: '检查罐体、管口、法兰和底部区域无渗漏。', id: 'leakage', label: '泄漏检查' },
+    { description: '确认液位、压力联锁与现场报警指示正常。', id: 'interlock', label: '联锁报警' },
+  ],
+  'PU-101': [
+    { description: '核对出口压力与控制系统读数，无异常波动。', id: 'outletPressure', label: '出口压力' },
+    { description: '听诊泵体运行声音，确认振动趋势在正常范围。', id: 'vibration', label: '振动噪声' },
+    { description: '检查轴承温度、润滑和冷却状态。', id: 'bearing', label: '轴承温度' },
+    { description: '检查机械密封、泵壳和法兰连接处无渗漏。', id: 'sealLeakage', label: '密封泄漏' },
+    { description: '确认电机电流、接地和变频运行状态正常。', id: 'motor', label: '电机状态' },
+  ],
+  'E-101': [
+    { description: '核对进出口温度差，确认换热负荷无异常突变。', id: 'temperature', label: '进出口温度' },
+    { description: '检查壳程压力读数和调节阀状态。', id: 'shellPressure', label: '壳程压力' },
+    { description: '检查管程压力读数，关注堵塞或压差升高迹象。', id: 'tubePressure', label: '管程压力' },
+    { description: '检查管箱、法兰、排凝点和壳体无渗漏。', id: 'leakage', label: '泄漏检查' },
+    { description: '检查保温层、支座和外表面，无结垢或异常发热点迹象。', id: 'insulation', label: '保温外观' },
+  ],
+  'V-101': [
+    { description: '检查容器外观、铭牌和防腐层，无明显变形或腐蚀。', id: 'appearance', label: '外观防腐' },
+    { description: '核对压力表与变送器读数，确认无超限趋势。', id: 'pressure', label: '压力仪表' },
+    { description: '确认安全阀铅封、前后阀位和排放管状态。', id: 'safetyValve', label: '安全阀' },
+    { description: '检查法兰、焊缝、管口和排污点无泄漏。', id: 'leakage', label: '泄漏检查' },
+    { description: '检查支座、地脚螺栓和管口应力状态。', id: 'support', label: '支座管口' },
+  ],
+  'V-102': [
+    { description: '检查容器外观、铭牌和防腐层，无明显变形或腐蚀。', id: 'appearance', label: '外观防腐' },
+    { description: '核对压力表与变送器读数，确认无超限趋势。', id: 'pressure', label: '压力仪表' },
+    { description: '确认安全阀铅封、前后阀位和排放管状态。', id: 'safetyValve', label: '安全阀' },
+    { description: '检查法兰、焊缝、管口和排污点无泄漏。', id: 'leakage', label: '泄漏检查' },
+    { description: '检查支座、地脚螺栓和管口应力状态。', id: 'support', label: '支座管口' },
+  ],
+  'CC-101': [
+    { description: '确认双路供电、电源指示和接地状态正常。', id: 'power', label: '供电状态' },
+    { description: '检查压力、液位、温度等信号采集状态，无丢点。', id: 'signals', label: '信号采集' },
+    { description: '确认报警灯、蜂鸣器和面板指示动作正常。', id: 'alarmIndicator', label: '报警指示' },
+    { description: '检查柜内接线端子、线槽和模块固定状态。', id: 'wiring', label: '接线端子' },
+    { description: '检查柜门密封、通风散热和现场环境。', id: 'cabinet', label: '柜体环境' },
+  ],
+}
+
+export const inspectionPersonTargets: Record<DeviceCode, [number, number, number]> = {
+  'CC-101': [-1.8, 0, 5.3],
+  'E-101': [-4.8, 0, 0.2],
+  'PU-101': [0.4, 0, 2.5],
+  'T-201': [3.6, 0, 3.3],
+  'V-101': [-6.2, 0, -2.2],
+  'V-102': [0.7, 0, -2.2],
+}
 
 export const instruments: InstrumentInfo[] = [
   { code: 'PG-101', name: '压力表' },
