@@ -1,11 +1,5 @@
-import { useEffect, useState } from 'react'
-
 import type { DeviceInfo } from '@/data/workshopDevices'
-
-type DevicesResponse = {
-  data?: DeviceInfo[]
-  ok: boolean
-}
+import { useApiResource, type UseApiResourceResult } from '@/hooks/useApiResource'
 
 type UseDevicesResult = {
   devices: DeviceInfo[]
@@ -14,54 +8,15 @@ type UseDevicesResult = {
 }
 
 export function useDevices(): UseDevicesResult {
-  const [devices, setDevices] = useState<DeviceInfo[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const result = useApiResource<DeviceInfo[]>('/api/devices', [])
 
-  useEffect(() => {
-    const controller = new AbortController()
+  return mapApiResourceResult(result)
+}
 
-    async function loadDevices() {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch('/api/devices', {
-          signal: controller.signal,
-        })
-
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`)
-        }
-
-        const result = (await response.json()) as DevicesResponse
-
-        if (!result.ok || !Array.isArray(result.data)) {
-          throw new Error('Invalid devices response payload')
-        }
-
-        setDevices(result.data)
-      } catch (error) {
-        if (controller.signal.aborted) {
-          return
-        }
-
-        setError(error instanceof Error ? error.message : 'Failed to load devices')
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    void loadDevices()
-
-    return () => controller.abort()
-  }, [])
-
+function mapApiResourceResult<T>(result: UseApiResourceResult<T>) {
   return {
-    devices,
-    error,
-    loading,
+    devices: result.data as DeviceInfo[],
+    error: result.error,
+    loading: result.loading,
   }
 }

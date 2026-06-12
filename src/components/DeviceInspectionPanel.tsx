@@ -1,10 +1,10 @@
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck } from 'lucide-react'
 import { Button } from 'antd'
 import {
-  inspectionChecklists,
   type DeviceCode,
   type DeviceInfo,
   type DeviceInspectionRecord,
+  type InspectionItem,
   type InspectionItemResult,
 } from '@/data/workshopDevices'
 
@@ -12,6 +12,7 @@ type DeviceInspectionPanelProps = {
   currentDeviceCode: DeviceCode
   currentDeviceIndex: number
   devices: DeviceInfo[]
+  inspectionChecklists: Record<DeviceCode, InspectionItem[]>
   onGoNext: () => void
   onGoPrevious: () => void
   onSetItemResult: (deviceCode: DeviceCode, itemId: string, result: InspectionItemResult) => void
@@ -35,7 +36,11 @@ const resultOptions: Array<{ className: string; iconClassName: string; label: st
   },
 ]
 
-function getCompletedCount(record: DeviceInspectionRecord, deviceCode: DeviceCode) {
+function getCompletedCount(
+  inspectionChecklists: Record<DeviceCode, InspectionItem[]>,
+  record: DeviceInspectionRecord,
+  deviceCode: DeviceCode,
+) {
   return inspectionChecklists[deviceCode].filter((item) => record.itemResults[item.id]).length
 }
 
@@ -43,6 +48,7 @@ export default function DeviceInspectionPanel({
   currentDeviceCode,
   currentDeviceIndex,
   devices,
+  inspectionChecklists,
   onGoNext,
   onGoPrevious,
   onSetItemResult,
@@ -52,7 +58,7 @@ export default function DeviceInspectionPanel({
 }: DeviceInspectionPanelProps) {
   const device = devices.find(({ code }) => code === currentDeviceCode)
   const checklist = inspectionChecklists[currentDeviceCode]
-  const completedCount = getCompletedCount(record, currentDeviceCode)
+  const completedCount = getCompletedCount(inspectionChecklists, record, currentDeviceCode)
   const isCurrentDeviceComplete = completedCount === checklist.length
   const isLastDevice = currentDeviceIndex === totalDevices - 1
 

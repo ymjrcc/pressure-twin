@@ -1,14 +1,15 @@
 import { AlertTriangle, CheckCircle2, ClipboardList, RotateCcw, X } from 'lucide-react'
 import { Button } from 'antd'
 import {
-  inspectionChecklists,
   type DeviceCode,
   type DeviceInfo,
+  type InspectionItem,
   type InspectionSession,
 } from '@/data/workshopDevices'
 
 type InspectionReportDialogProps = {
   devices: DeviceInfo[]
+  inspectionChecklists: Record<DeviceCode, InspectionItem[]>
   onClose: () => void
   onRestart: () => void
   session: InspectionSession
@@ -30,7 +31,11 @@ function formatReportTime(timestamp?: number) {
   }).format(timestamp)
 }
 
-function getReportStats(devices: DeviceInfo[], session: InspectionSession) {
+function getReportStats(
+  devices: DeviceInfo[],
+  inspectionChecklists: Record<DeviceCode, InspectionItem[]>,
+  session: InspectionSession,
+) {
   return devices.reduce(
     (stats, device) => {
       const record = session.records[device.code]
@@ -56,8 +61,14 @@ function getDeviceName(devices: DeviceInfo[], deviceCode: DeviceCode) {
   return devices.find((device) => device.code === deviceCode)?.name ?? deviceCode
 }
 
-export default function InspectionReportDialog({ devices, onClose, onRestart, session }: InspectionReportDialogProps) {
-  const stats = getReportStats(devices, session)
+export default function InspectionReportDialog({
+  devices,
+  inspectionChecklists,
+  onClose,
+  onRestart,
+  session,
+}: InspectionReportDialogProps) {
+  const stats = getReportStats(devices, inspectionChecklists, session)
 
   return (
     <div className="fixed inset-0 z-[2147483647] grid place-items-center bg-slate-950/38 px-4 py-6 backdrop-blur-[2px]">

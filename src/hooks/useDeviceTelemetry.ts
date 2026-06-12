@@ -8,6 +8,7 @@ import {
   type DeviceTelemetrySnapshot,
   getTelemetryAlarmKey,
   type TelemetryAlarmStartedAtByParameter,
+  type TelemetryMetricConfig,
   type TelemetryOverrideStatus,
 } from '@/data/deviceTelemetry'
 import type { DeviceCode } from '@/data/workshopDevices'
@@ -21,13 +22,22 @@ export type UseDeviceTelemetryResult = {
   telemetryByDevice: DeviceTelemetrySnapshot
 }
 
-export function useDeviceTelemetry(refreshMs = 2000): UseDeviceTelemetryResult {
-  const initialRuntime = useMemo(() => createInitialTelemetryRuntime(), [])
+export function useDeviceTelemetry(
+  telemetryMetricConfigs: Record<DeviceCode, TelemetryMetricConfig[]>,
+  refreshMs = 2000,
+): UseDeviceTelemetryResult {
+  const initialRuntime = useMemo(() => createInitialTelemetryRuntime(telemetryMetricConfigs), [telemetryMetricConfigs])
   const alarmStartedAtRef = useRef<TelemetryAlarmStartedAtByParameter>({})
   const runtimeRef = useRef<DeviceTelemetryRuntime>(initialRuntime)
   const createTrackedTelemetrySnapshot = useCallback(
     (runtime: DeviceTelemetryRuntime, nextOverrides: DeviceTelemetryOverrides, updatedAt = Date.now()) => {
-      const snapshot = createTelemetrySnapshot(runtime, nextOverrides, updatedAt, alarmStartedAtRef.current)
+      const snapshot = createTelemetrySnapshot(
+        telemetryMetricConfigs,
+        runtime,
+        nextOverrides,
+        updatedAt,
+        alarmStartedAtRef.current,
+      )
       const nextAlarmStartedAt = { ...alarmStartedAtRef.current }
       let alarmStartedAtChanged = false
 
@@ -56,29 +66,43 @@ export function useDeviceTelemetry(refreshMs = 2000): UseDeviceTelemetryResult {
       }
 
       alarmStartedAtRef.current = nextAlarmStartedAt
-      return createTelemetrySnapshot(runtime, nextOverrides, updatedAt, nextAlarmStartedAt)
+      return createTelemetrySnapshot(telemetryMetricConfigs, runtime, nextOverrides, updatedAt, nextAlarmStartedAt)
     },
-    [],
+    [telemetryMetricConfigs],
   )
   const [overrides, setOverrides] = useState<DeviceTelemetryOverrides>({})
   const [telemetryByDevice, setTelemetryByDevice] = useState<DeviceTelemetrySnapshot>(() =>
-    createTelemetrySnapshot(initialRuntime, {}, Date.now(), {}),
+    createTelemetrySnapshot(telemetryMetricConfigs, initialRuntime, {}, Date.now(), {}),
   )
 
   useEffect(() => {
+    runtimeRef.current = initialRuntime
+    alarmStartedAtRef.current = {}
+    setTelemetryByDevice(createTelemetrySnapshot(telemetryMetricConfigs, initialRuntime, overrides, Date.now(), {}))
+  }, [initialRuntime, overrides, telemetryMetricConfigs])
+
+  useEffect(() => {
+    if (Object.keys(telemetryMetricConfigs).length === 0) {
+      return
+    }
+
     const intervalId = window.setInterval(() => {
       const updatedAt = Date.now()
 
-      runtimeRef.current = advanceTelemetryRuntime(runtimeRef.current)
+      runtimeRef.current = advanceTelemetryRuntime(telemetryMetricConfigs, runtimeRef.current)
       setTelemetryByDevice(createTrackedTelemetrySnapshot(runtimeRef.current, overrides, updatedAt))
     }, refreshMs)
 
     return () => window.clearInterval(intervalId)
-  }, [createTrackedTelemetrySnapshot, overrides, refreshMs])
+  }, [createTrackedTelemetrySnapshot, overrides, refreshMs, telemetryMetricConfigs])
 
   useEffect(() => {
+    if (Object.keys(telemetryMetricConfigs).length === 0) {
+      return
+    }
+
     setTelemetryByDevice(createTrackedTelemetrySnapshot(runtimeRef.current, overrides))
-  }, [createTrackedTelemetrySnapshot, overrides])
+  }, [createTrackedTelemetrySnapshot, overrides, telemetryMetricConfigs])
 
   const setDeviceOverride = useCallback((deviceCode: DeviceCode, status: TelemetryOverrideStatus) => {
     setOverrides((currentOverrides) => ({

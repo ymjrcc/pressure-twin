@@ -2,9 +2,9 @@ import { AlertTriangle, RotateCcw, SlidersHorizontal, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import {
-  telemetryMetricConfigs,
   type DeviceTelemetryOverrides,
   type DeviceTelemetrySnapshot,
+  type TelemetryMetricConfig,
   type TelemetryOverrideStatus,
 } from '@/data/deviceTelemetry'
 import type { DeviceCode, DeviceInfo } from '@/data/workshopDevices'
@@ -21,6 +21,7 @@ type TelemetryControlPanelProps = {
   selectedDeviceCode: DeviceCode | null
   setDeviceOverride: (deviceCode: DeviceCode, status: TelemetryOverrideStatus) => void
   setParameterOverride: (deviceCode: DeviceCode, parameterKey: string, status: TelemetryOverrideStatus) => void
+  telemetryConfigs: Record<DeviceCode, TelemetryMetricConfig[]>
   telemetryByDevice: DeviceTelemetrySnapshot
 }
 
@@ -49,8 +50,12 @@ function getDeviceName(devices: DeviceInfo[], deviceCode: DeviceCode) {
   return devices.find((device) => device.code === deviceCode)?.name ?? deviceCode
 }
 
-function getParameterLabel(deviceCode: DeviceCode, parameterKey: string) {
-  return telemetryMetricConfigs[deviceCode].find((parameter) => parameter.key === parameterKey)?.label ?? parameterKey
+function getParameterLabel(
+  telemetryConfigs: Record<DeviceCode, TelemetryMetricConfig[]>,
+  deviceCode: DeviceCode,
+  parameterKey: string,
+) {
+  return telemetryConfigs[deviceCode]?.find((parameter) => parameter.key === parameterKey)?.label ?? parameterKey
 }
 
 export default function TelemetryControlPanel({
@@ -62,6 +67,7 @@ export default function TelemetryControlPanel({
   selectedDeviceCode,
   setDeviceOverride,
   setParameterOverride,
+  telemetryConfigs,
   telemetryByDevice,
 }: TelemetryControlPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -70,7 +76,8 @@ export default function TelemetryControlPanel({
   const resolvedDeviceCode = devices.some((device) => device.code === deviceCode)
     ? deviceCode
     : selectedDeviceCode ?? devices[0]?.code ?? 'T-201'
-  const [parameterKey, setParameterKey] = useState(telemetryMetricConfigs[resolvedDeviceCode][0].key)
+  const defaultParameterKey = telemetryConfigs[resolvedDeviceCode]?.[0]?.key ?? ''
+  const [parameterKey, setParameterKey] = useState(defaultParameterKey)
   const [status, setStatus] = useState<TelemetryOverrideStatus>('alarm')
   const activeOverrides = useMemo<ActiveOverride[]>(
     () =>
@@ -81,19 +88,19 @@ export default function TelemetryControlPanel({
           : []
         const parameterOverrides = Object.entries(override?.parameters ?? {}).map(([key, parameterStatus]) => ({
           deviceCode: device.code,
-          label: getParameterLabel(device.code, key),
+          label: getParameterLabel(telemetryConfigs, device.code, key),
           parameterKey: key,
           status: parameterStatus,
         }))
 
         return [...deviceOverride, ...parameterOverrides]
       }),
-    [overrides],
+    [overrides, telemetryConfigs],
   )
-  const selectedParameters = telemetryByDevice[resolvedDeviceCode].parameters
+  const selectedParameters = telemetryByDevice[resolvedDeviceCode]?.parameters ?? []
   const selectedParameterKey = selectedParameters.some((parameter) => parameter.key === parameterKey)
     ? parameterKey
-    : selectedParameters[0].key
+    : selectedParameters[0]?.key ?? ''
 
   const applyOverride = () => {
     if (mode === 'device') {
@@ -109,7 +116,7 @@ export default function TelemetryControlPanel({
     setIsOpen(true)
   }
 
-  if (devices.length === 0) {
+  if (devices.length === 0 || Object.keys(telemetryConfigs).length === 0) {
     return renderTrigger ? renderTrigger({ openPanel: () => undefined }) : null
   }
 

@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 
 import {
-  inspectionChecklists,
   inspectionPersonTargets,
   type DeviceCode,
   type DeviceInfo,
   type DeviceInspectionRecord,
   type InspectionItemResult,
+  type InspectionItem,
   type InspectionSession,
 } from '@/data/workshopDevices'
 
 type UseInspectionSessionOptions = {
   devices: DeviceInfo[]
+  inspectionChecklists: Record<DeviceCode, InspectionItem[]>
   onClearSelectedDevice?: () => void
 }
 
@@ -33,11 +34,15 @@ function createInspectionSession(devices: DeviceInfo[]): InspectionSession {
   }
 }
 
-function isDeviceInspectionComplete(record: DeviceInspectionRecord, deviceCode: DeviceCode) {
+function isDeviceInspectionComplete(
+  inspectionChecklists: Record<DeviceCode, InspectionItem[]>,
+  record: DeviceInspectionRecord,
+  deviceCode: DeviceCode,
+) {
   return inspectionChecklists[deviceCode].every((item) => record.itemResults[item.id])
 }
 
-export function useInspectionSession({ devices, onClearSelectedDevice }: UseInspectionSessionOptions) {
+export function useInspectionSession({ devices, inspectionChecklists, onClearSelectedDevice }: UseInspectionSessionOptions) {
   const [inspectionSession, setInspectionSession] = useState<InspectionSession | null>(null)
   const [isGeneratingInspectionReport, setIsGeneratingInspectionReport] = useState(false)
   const inspectionReportTimerRef = useRef<number | null>(null)
@@ -142,7 +147,7 @@ export function useInspectionSession({ devices, onClearSelectedDevice }: UseInsp
       const device = devices[session.currentDeviceIndex]
       const record = session.records[device.code]
 
-      if (!isDeviceInspectionComplete(record, device.code)) {
+      if (!isDeviceInspectionComplete(inspectionChecklists, record, device.code)) {
         return session
       }
 

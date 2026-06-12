@@ -18,7 +18,11 @@ import type { DeviceTelemetrySnapshot } from '@/data/deviceTelemetry'
 import type { DeviceCode } from '@/data/workshopDevices'
 import { useDeviceTelemetry } from '@/hooks/useDeviceTelemetry'
 import { useDevices } from '@/hooks/useDevices'
+import { useInspectionChecklists } from '@/hooks/useInspectionChecklists'
+import { useInstruments } from '@/hooks/useInstruments'
 import { useInspectionSession } from '@/hooks/useInspectionSession'
+import { useProcessFlowSteps } from '@/hooks/useProcessFlowSteps'
+import { useTelemetryConfigs } from '@/hooks/useTelemetryConfigs'
 
 function getAbnormalDeviceStatuses(telemetryByDevice: DeviceTelemetrySnapshot): AbnormalDeviceStatuses {
   return Object.fromEntries(
@@ -30,6 +34,10 @@ function getAbnormalDeviceStatuses(telemetryByDevice: DeviceTelemetrySnapshot): 
 
 export default function Home() {
   const { devices, error, loading } = useDevices()
+  const { inspectionChecklists, error: inspectionChecklistsError, loading: inspectionChecklistsLoading } = useInspectionChecklists()
+  const { instruments, error: instrumentsError, loading: instrumentsLoading } = useInstruments()
+  const { processFlowSteps, error: processFlowStepsError, loading: processFlowStepsLoading } = useProcessFlowSteps()
+  const { telemetryConfigs, error: telemetryConfigsError, loading: telemetryConfigsLoading } = useTelemetryConfigs()
   const [isProcessFlowOpen, setIsProcessFlowOpen] = useState(false)
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<DeviceCode | null>(null)
   const [controlInteractionVersion, setControlInteractionVersion] = useState(0)
@@ -40,7 +48,7 @@ export default function Home() {
     setDeviceOverride,
     setParameterOverride,
     telemetryByDevice,
-  } = useDeviceTelemetry(2000)
+  } = useDeviceTelemetry(telemetryConfigs, 2000)
   const {
     cancelInspection,
     closeInspectionReport,
@@ -59,8 +67,11 @@ export default function Home() {
     updateInspectionNote,
   } = useInspectionSession({
     devices,
+    inspectionChecklists,
     onClearSelectedDevice: () => setSelectedDeviceCode(null),
   })
+  const isMetaLoading = loading || inspectionChecklistsLoading || instrumentsLoading || processFlowStepsLoading || telemetryConfigsLoading
+  const metaError = error ?? inspectionChecklistsError ?? instrumentsError ?? processFlowStepsError ?? telemetryConfigsError
   const abnormalDeviceStatuses = useMemo(() => getAbnormalDeviceStatuses(telemetryByDevice), [telemetryByDevice])
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const activeSelectedDeviceCode = currentInspectionDevice?.code ?? selectedDeviceCode
@@ -141,6 +152,7 @@ export default function Home() {
             selectedDeviceCode={activeSelectedDeviceCode}
             setDeviceOverride={setDeviceOverride}
             setParameterOverride={setParameterOverride}
+            telemetryConfigs={telemetryConfigs}
             telemetryByDevice={telemetryByDevice}
           />
           <Button
@@ -149,7 +161,7 @@ export default function Home() {
                 ? 'border-rose-300/38 bg-slate-900/84 text-rose-100 hover:!border-rose-200/70 hover:!bg-rose-400/18 hover:!text-white'
                 : 'border-emerald-300/38 bg-slate-900/84 text-emerald-100 hover:!border-emerald-200/70 hover:!bg-emerald-300/16 hover:!text-white'
             }`}
-            disabled={devices.length === 0}
+            disabled={devices.length === 0 || isMetaLoading || Object.keys(inspectionChecklists).length === 0}
             icon={isInspectionRunning ? <X size={16} strokeWidth={2.3} /> : <ClipboardCheck size={16} strokeWidth={2.3} />}
             onClick={isInspectionRunning ? cancelInspection : startInspection}
             type="default"
@@ -157,7 +169,7 @@ export default function Home() {
             {isInspectionRunning ? '取消巡检' : '开始巡检'}
           </Button>
         </div>
-        <WorkshopLegend devices={devices} selectedDeviceCode={activeSelectedDeviceCode} />
+        <WorkshopLegend devices={devices} instruments={instruments} selectedDeviceCode={activeSelectedDeviceCode} />
       </div>
       {isProcessFlowOpen && typeof document !== 'undefined'
         ? createPortal(
@@ -166,7 +178,7 @@ export default function Home() {
               onClick={() => setIsProcessFlowOpen(false)}
             >
               <div onClick={(event) => event.stopPropagation()}>
-                <WorkshopProcessFlow onClose={() => setIsProcessFlowOpen(false)} />
+                <WorkshopProcessFlow onClose={() => setIsProcessFlowOpen(false)} processFlowSteps={processFlowSteps} />
               </div>
             </div>,
             document.body,
@@ -177,6 +189,7 @@ export default function Home() {
           currentDeviceCode={currentInspectionDevice.code}
           currentDeviceIndex={runningInspectionSession.currentDeviceIndex}
           devices={devices}
+          inspectionChecklists={inspectionChecklists}
           onGoNext={goToNextInspectionDevice}
           onGoPrevious={goToPreviousInspectionDevice}
           onSetItemResult={updateInspectionItemResult}
@@ -197,6 +210,7 @@ export default function Home() {
         ? createPortal(
             <InspectionReportDialog
               devices={devices}
+              inspectionChecklists={inspectionChecklists}
               session={inspectionSession}
               onClose={closeInspectionReport}
               onRestart={restartInspection}
@@ -204,10 +218,10 @@ export default function Home() {
             document.body,
           )
         : null}
-      {loading || error ? (
+      {isMetaLoading || metaError ? (
         <div className="pointer-events-none absolute inset-x-0 top-18 z-20 flex justify-center px-4">
           <div className="pointer-events-auto rounded-[8px] border border-white/20 bg-slate-950/82 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur">
-            {loading ? '正在加载设备数据...' : `设备数据加载失败：${error}`}
+            {isMetaLoading ? '正在加载设备与页面配置数据...' : `页面配置加载失败：${metaError}`}
           </div>
         </div>
       ) : null}

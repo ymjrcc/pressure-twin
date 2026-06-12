@@ -1,9 +1,10 @@
 import { X } from 'lucide-react'
 
-import { processFlowSteps, type DeviceStatus } from '@/data/workshopDevices'
+import type { DeviceStatus, ProcessFlowStep } from '@/data/workshopDevices'
 
 type WorkshopProcessFlowProps = {
   onClose: () => void
+  processFlowSteps: ProcessFlowStep[]
 }
 
 const statusMeta: Record<DeviceStatus, { dotClassName: string; label: string }> = {
@@ -21,7 +22,7 @@ function getCardClassName(variant?: string) {
   return 'border-white/14 bg-white/7'
 }
 
-export default function WorkshopProcessFlow({ onClose }: WorkshopProcessFlowProps) {
+export default function WorkshopProcessFlow({ onClose, processFlowSteps }: WorkshopProcessFlowProps) {
   return (
     <section className="pointer-events-auto grid max-h-[calc(100vh-7rem)] w-[460px] max-w-[calc(100vw-2rem)] gap-3 overflow-y-auto rounded-[8px] border border-white/20 bg-slate-900/90 px-4 py-4 text-white shadow-2xl shadow-slate-950/35 backdrop-blur">
       <div className="flex items-center justify-between gap-3">

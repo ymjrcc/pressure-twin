@@ -112,6 +112,11 @@ export default function DeviceDetailCard({ devices, onClose, selectedDeviceCode,
   }
 
   const telemetry = telemetryByDevice[device.code]
+
+  if (!telemetry) {
+    return null
+  }
+
   const status = statusMeta[telemetry.status]
   const cardTone = statusCardTone[telemetry.status]
 
