@@ -15,8 +15,9 @@ import WorkshopLegend from '@/components/WorkshopLegend'
 import WorkshopProcessFlow from '@/components/WorkshopProcessFlow'
 import WorkshopScene, { type AbnormalDeviceStatuses } from '@/components/WorkshopScene'
 import type { DeviceTelemetrySnapshot } from '@/data/deviceTelemetry'
-import { devices, type DeviceCode } from '@/data/workshopDevices'
+import type { DeviceCode } from '@/data/workshopDevices'
 import { useDeviceTelemetry } from '@/hooks/useDeviceTelemetry'
+import { useDevices } from '@/hooks/useDevices'
 import { useInspectionSession } from '@/hooks/useInspectionSession'
 
 function getAbnormalDeviceStatuses(telemetryByDevice: DeviceTelemetrySnapshot): AbnormalDeviceStatuses {
@@ -28,6 +29,7 @@ function getAbnormalDeviceStatuses(telemetryByDevice: DeviceTelemetrySnapshot): 
 }
 
 export default function Home() {
+  const { devices, error, loading } = useDevices()
   const [isProcessFlowOpen, setIsProcessFlowOpen] = useState(false)
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<DeviceCode | null>(null)
   const [controlInteractionVersion, setControlInteractionVersion] = useState(0)
@@ -56,6 +58,7 @@ export default function Home() {
     updateInspectionItemResult,
     updateInspectionNote,
   } = useInspectionSession({
+    devices,
     onClearSelectedDevice: () => setSelectedDeviceCode(null),
   })
   const abnormalDeviceStatuses = useMemo(() => getAbnormalDeviceStatuses(telemetryByDevice), [telemetryByDevice])
@@ -86,6 +89,7 @@ export default function Home() {
         <PerspectiveCamera makeDefault position={[-8, 6.6, 15]} fov={48} />
         <WorkshopScene
           abnormalDeviceStatuses={abnormalDeviceStatuses}
+          devices={devices}
           inspectionPersonTarget={inspectionPersonTarget}
           onSelectDevice={toggleSelectedDevice}
           selectedDeviceCode={activeSelectedDeviceCode}
@@ -122,6 +126,7 @@ export default function Home() {
           <TelemetryControlPanel
             clearAllOverrides={clearAllOverrides}
             clearOverride={clearOverride}
+            devices={devices}
             overrides={overrides}
             renderTrigger={({ openPanel }) => (
               <Button
@@ -144,6 +149,7 @@ export default function Home() {
                 ? 'border-rose-300/38 bg-slate-900/84 text-rose-100 hover:!border-rose-200/70 hover:!bg-rose-400/18 hover:!text-white'
                 : 'border-emerald-300/38 bg-slate-900/84 text-emerald-100 hover:!border-emerald-200/70 hover:!bg-emerald-300/16 hover:!text-white'
             }`}
+            disabled={devices.length === 0}
             icon={isInspectionRunning ? <X size={16} strokeWidth={2.3} /> : <ClipboardCheck size={16} strokeWidth={2.3} />}
             onClick={isInspectionRunning ? cancelInspection : startInspection}
             type="default"
@@ -151,7 +157,7 @@ export default function Home() {
             {isInspectionRunning ? '取消巡检' : '开始巡检'}
           </Button>
         </div>
-        <WorkshopLegend selectedDeviceCode={activeSelectedDeviceCode} />
+        <WorkshopLegend devices={devices} selectedDeviceCode={activeSelectedDeviceCode} />
       </div>
       {isProcessFlowOpen && typeof document !== 'undefined'
         ? createPortal(
@@ -170,6 +176,7 @@ export default function Home() {
         <DeviceInspectionPanel
           currentDeviceCode={currentInspectionDevice.code}
           currentDeviceIndex={runningInspectionSession.currentDeviceIndex}
+          devices={devices}
           onGoNext={goToNextInspectionDevice}
           onGoPrevious={goToPreviousInspectionDevice}
           onSetItemResult={updateInspectionItemResult}
@@ -179,6 +186,7 @@ export default function Home() {
         />
       ) : (
         <DeviceDetailCard
+          devices={devices}
           selectedDeviceCode={activeSelectedDeviceCode}
           telemetryByDevice={telemetryByDevice}
           onClose={() => setSelectedDeviceCode(null)}
@@ -188,6 +196,7 @@ export default function Home() {
       {inspectionSession?.status === 'completed' && !isGeneratingInspectionReport && typeof document !== 'undefined'
         ? createPortal(
             <InspectionReportDialog
+              devices={devices}
               session={inspectionSession}
               onClose={closeInspectionReport}
               onRestart={restartInspection}
@@ -195,6 +204,13 @@ export default function Home() {
             document.body,
           )
         : null}
+      {loading || error ? (
+        <div className="pointer-events-none absolute inset-x-0 top-18 z-20 flex justify-center px-4">
+          <div className="pointer-events-auto rounded-[8px] border border-white/20 bg-slate-950/82 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur">
+            {loading ? '正在加载设备数据...' : `设备数据加载失败：${error}`}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

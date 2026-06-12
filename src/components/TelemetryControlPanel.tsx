@@ -7,7 +7,7 @@ import {
   type DeviceTelemetrySnapshot,
   type TelemetryOverrideStatus,
 } from '@/data/deviceTelemetry'
-import { devices, type DeviceCode } from '@/data/workshopDevices'
+import type { DeviceCode, DeviceInfo } from '@/data/workshopDevices'
 import { Button } from 'antd'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -15,6 +15,7 @@ import { createPortal } from 'react-dom'
 type TelemetryControlPanelProps = {
   clearAllOverrides: () => void
   clearOverride: (deviceCode: DeviceCode, parameterKey?: string) => void
+  devices: DeviceInfo[]
   overrides: DeviceTelemetryOverrides
   renderTrigger?: (options: { openPanel: () => void }) => ReactNode
   selectedDeviceCode: DeviceCode | null
@@ -44,7 +45,7 @@ const statusLabel: Record<TelemetryOverrideStatus, string> = {
   warning: '预警',
 }
 
-function getDeviceName(deviceCode: DeviceCode) {
+function getDeviceName(devices: DeviceInfo[], deviceCode: DeviceCode) {
   return devices.find((device) => device.code === deviceCode)?.name ?? deviceCode
 }
 
@@ -55,6 +56,7 @@ function getParameterLabel(deviceCode: DeviceCode, parameterKey: string) {
 export default function TelemetryControlPanel({
   clearAllOverrides,
   clearOverride,
+  devices,
   overrides,
   renderTrigger,
   selectedDeviceCode,
@@ -64,8 +66,11 @@ export default function TelemetryControlPanel({
 }: TelemetryControlPanelProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [mode, setMode] = useState<OverrideMode>('device')
-  const [deviceCode, setDeviceCode] = useState<DeviceCode>(selectedDeviceCode ?? devices[0].code)
-  const [parameterKey, setParameterKey] = useState(telemetryMetricConfigs[deviceCode][0].key)
+  const [deviceCode, setDeviceCode] = useState<DeviceCode>(selectedDeviceCode ?? 'T-201')
+  const resolvedDeviceCode = devices.some((device) => device.code === deviceCode)
+    ? deviceCode
+    : selectedDeviceCode ?? devices[0]?.code ?? 'T-201'
+  const [parameterKey, setParameterKey] = useState(telemetryMetricConfigs[resolvedDeviceCode][0].key)
   const [status, setStatus] = useState<TelemetryOverrideStatus>('alarm')
   const activeOverrides = useMemo<ActiveOverride[]>(
     () =>
@@ -85,23 +90,27 @@ export default function TelemetryControlPanel({
       }),
     [overrides],
   )
-  const selectedParameters = telemetryByDevice[deviceCode].parameters
+  const selectedParameters = telemetryByDevice[resolvedDeviceCode].parameters
   const selectedParameterKey = selectedParameters.some((parameter) => parameter.key === parameterKey)
     ? parameterKey
     : selectedParameters[0].key
 
   const applyOverride = () => {
     if (mode === 'device') {
-      setDeviceOverride(deviceCode, status)
+      setDeviceOverride(resolvedDeviceCode, status)
       return
     }
 
-    setParameterOverride(deviceCode, selectedParameterKey, status)
+    setParameterOverride(resolvedDeviceCode, selectedParameterKey, status)
   }
 
   const openPanel = () => {
-    setDeviceCode(selectedDeviceCode ?? deviceCode)
+    setDeviceCode(selectedDeviceCode ?? resolvedDeviceCode)
     setIsOpen(true)
+  }
+
+  if (devices.length === 0) {
+    return renderTrigger ? renderTrigger({ openPanel: () => undefined }) : null
   }
 
   return (
@@ -152,7 +161,7 @@ export default function TelemetryControlPanel({
                   <select
                     className="h-9 rounded-[6px] border border-white/14 bg-slate-950/70 px-2 text-sm font-bold text-white outline-none focus:border-cyan-200"
                     onChange={(event) => setDeviceCode(event.target.value as DeviceCode)}
-                    value={deviceCode}
+                    value={resolvedDeviceCode}
                   >
                     {devices.map((device) => (
                       <option key={device.code} value={device.code}>
@@ -267,7 +276,7 @@ export default function TelemetryControlPanel({
                             {override.deviceCode}
                           </span>
                           <span className="min-w-0 truncate text-xs font-bold text-slate-200">
-                            {getDeviceName(override.deviceCode)} / {override.label}
+                            {getDeviceName(devices, override.deviceCode)} / {override.label}
                           </span>
                         </div>
                         <div className="mt-1 text-[11px] font-bold text-rose-200">{statusLabel[override.status]}</div>

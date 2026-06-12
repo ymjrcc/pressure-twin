@@ -1,8 +1,9 @@
 import DeviceMiniPreview from '@/components/DeviceMiniPreview'
 import type { DeviceTelemetrySnapshot } from '@/data/deviceTelemetry'
-import { devices, type DeviceCode, type DeviceStatus } from '@/data/workshopDevices'
+import type { DeviceCode, DeviceInfo, DeviceStatus } from '@/data/workshopDevices'
 
 type DeviceDetailCardProps = {
+  devices: DeviceInfo[]
   onClose: () => void
   selectedDeviceCode: DeviceCode | null
   telemetryByDevice: DeviceTelemetrySnapshot
@@ -103,7 +104,7 @@ function formatAlarmDuration(durationMs: number) {
   return `${paddedMinutes}:${paddedSeconds}`
 }
 
-export default function DeviceDetailCard({ onClose, selectedDeviceCode, telemetryByDevice }: DeviceDetailCardProps) {
+export default function DeviceDetailCard({ devices, onClose, selectedDeviceCode, telemetryByDevice }: DeviceDetailCardProps) {
   const device = devices.find(({ code }) => code === selectedDeviceCode)
 
   if (!device) {

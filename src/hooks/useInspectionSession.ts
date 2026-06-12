@@ -1,20 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 
 import {
-  devices,
   inspectionChecklists,
   inspectionPersonTargets,
   type DeviceCode,
+  type DeviceInfo,
   type DeviceInspectionRecord,
   type InspectionItemResult,
   type InspectionSession,
 } from '@/data/workshopDevices'
 
 type UseInspectionSessionOptions = {
+  devices: DeviceInfo[]
   onClearSelectedDevice?: () => void
 }
 
-function createInspectionSession(): InspectionSession {
+function createInspectionSession(devices: DeviceInfo[]): InspectionSession {
   return {
     currentDeviceIndex: 0,
     records: Object.fromEntries(
@@ -36,7 +37,7 @@ function isDeviceInspectionComplete(record: DeviceInspectionRecord, deviceCode: 
   return inspectionChecklists[deviceCode].every((item) => record.itemResults[item.id])
 }
 
-export function useInspectionSession({ onClearSelectedDevice }: UseInspectionSessionOptions = {}) {
+export function useInspectionSession({ devices, onClearSelectedDevice }: UseInspectionSessionOptions) {
   const [inspectionSession, setInspectionSession] = useState<InspectionSession | null>(null)
   const [isGeneratingInspectionReport, setIsGeneratingInspectionReport] = useState(false)
   const inspectionReportTimerRef = useRef<number | null>(null)
@@ -56,9 +57,13 @@ export function useInspectionSession({ onClearSelectedDevice }: UseInspectionSes
   useEffect(() => clearInspectionReportTimer, [])
 
   const startInspection = () => {
+    if (devices.length === 0) {
+      return
+    }
+
     clearInspectionReportTimer()
     setIsGeneratingInspectionReport(false)
-    setInspectionSession(createInspectionSession())
+    setInspectionSession(createInspectionSession(devices))
   }
 
   const cancelInspection = () => {

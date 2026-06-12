@@ -1,10 +1,11 @@
-import { devices, instruments, type DeviceCode } from '@/data/workshopDevices'
+import { instruments, type DeviceCode, type DeviceInfo } from '@/data/workshopDevices'
 
 type WorkshopLegendProps = {
+  devices: DeviceInfo[]
   selectedDeviceCode: DeviceCode | null
 }
 
-export default function WorkshopLegend({ selectedDeviceCode }: WorkshopLegendProps) {
+export default function WorkshopLegend({ devices, selectedDeviceCode }: WorkshopLegendProps) {
   return (
     <div className="pointer-events-none grid max-h-full min-w-[320px] gap-3 overflow-hidden rounded-[8px] border border-white/20 bg-slate-900/82 px-4 py-3 text-[13px] leading-tight text-white shadow-lg backdrop-blur">
       <div className="flex items-center gap-3">

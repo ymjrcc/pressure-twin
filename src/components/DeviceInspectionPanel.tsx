@@ -1,9 +1,9 @@
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck } from 'lucide-react'
 import { Button } from 'antd'
 import {
-  devices,
   inspectionChecklists,
   type DeviceCode,
+  type DeviceInfo,
   type DeviceInspectionRecord,
   type InspectionItemResult,
 } from '@/data/workshopDevices'
@@ -11,6 +11,7 @@ import {
 type DeviceInspectionPanelProps = {
   currentDeviceCode: DeviceCode
   currentDeviceIndex: number
+  devices: DeviceInfo[]
   onGoNext: () => void
   onGoPrevious: () => void
   onSetItemResult: (deviceCode: DeviceCode, itemId: string, result: InspectionItemResult) => void
@@ -41,6 +42,7 @@ function getCompletedCount(record: DeviceInspectionRecord, deviceCode: DeviceCod
 export default function DeviceInspectionPanel({
   currentDeviceCode,
   currentDeviceIndex,
+  devices,
   onGoNext,
   onGoPrevious,
   onSetItemResult,

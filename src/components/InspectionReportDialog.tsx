@@ -1,13 +1,14 @@
 import { AlertTriangle, CheckCircle2, ClipboardList, RotateCcw, X } from 'lucide-react'
 import { Button } from 'antd'
 import {
-  devices,
   inspectionChecklists,
   type DeviceCode,
+  type DeviceInfo,
   type InspectionSession,
 } from '@/data/workshopDevices'
 
 type InspectionReportDialogProps = {
+  devices: DeviceInfo[]
   onClose: () => void
   onRestart: () => void
   session: InspectionSession
@@ -29,7 +30,7 @@ function formatReportTime(timestamp?: number) {
   }).format(timestamp)
 }
 
-function getReportStats(session: InspectionSession) {
+function getReportStats(devices: DeviceInfo[], session: InspectionSession) {
   return devices.reduce(
     (stats, device) => {
       const record = session.records[device.code]
@@ -51,12 +52,12 @@ function getReportStats(session: InspectionSession) {
   )
 }
 
-function getDeviceName(deviceCode: DeviceCode) {
+function getDeviceName(devices: DeviceInfo[], deviceCode: DeviceCode) {
   return devices.find((device) => device.code === deviceCode)?.name ?? deviceCode
 }
 
-export default function InspectionReportDialog({ onClose, onRestart, session }: InspectionReportDialogProps) {
-  const stats = getReportStats(session)
+export default function InspectionReportDialog({ devices, onClose, onRestart, session }: InspectionReportDialogProps) {
+  const stats = getReportStats(devices, session)
 
   return (
     <div className="fixed inset-0 z-[2147483647] grid place-items-center bg-slate-950/38 px-4 py-6 backdrop-blur-[2px]">
@@ -119,7 +120,7 @@ export default function InspectionReportDialog({ onClose, onRestart, session }: 
                       <span className="shrink-0 rounded-[4px] border border-sky-300/40 bg-sky-300/14 px-2 py-1 text-[11px] font-extrabold leading-none text-sky-100">
                         {device.code}
                       </span>
-                      <h3 className="m-0 truncate text-sm font-extrabold text-slate-100">{getDeviceName(device.code)}</h3>
+                      <h3 className="m-0 truncate text-sm font-extrabold text-slate-100">{getDeviceName(devices, device.code)}</h3>
                     </div>
                   </div>
                   <span className={`shrink-0 rounded-[4px] border px-2 py-1 text-[11px] font-extrabold leading-none ${

@@ -15,12 +15,13 @@ import ProcessPipeline from '@/components/models/ProcessPipeline'
 import ScalePerson from '@/components/models/ScalePerson'
 import SignalLines from '@/components/models/SignalLines'
 import VerticalStorageTank from '@/components/models/VerticalStorageTank'
-import { devices, type DeviceCode, type DeviceStatus } from '@/data/workshopDevices'
+import type { DeviceCode, DeviceInfo, DeviceStatus } from '@/data/workshopDevices'
 
 export type AbnormalDeviceStatuses = Partial<Record<DeviceCode, Exclude<DeviceStatus, 'normal'>>>
 
 type WorkshopSceneProps = {
   abnormalDeviceStatuses: AbnormalDeviceStatuses
+  devices: DeviceInfo[]
   inspectionPersonTarget: [number, number, number] | null
   onSelectDevice: (code: DeviceCode) => void
   selectedDeviceCode: DeviceCode | null
@@ -145,6 +146,7 @@ function SelectableDevice({ children, code, onSelect, selectedDeviceCode }: Sele
 
 export default function WorkshopScene({
   abnormalDeviceStatuses,
+  devices,
   inspectionPersonTarget,
   onSelectDevice,
   selectedDeviceCode,
@@ -204,7 +206,7 @@ export default function WorkshopScene({
       <DimmableGroup dimmed={selectedDeviceCode !== null}>
         <SignalLines />
       </DimmableGroup>
-      <DeviceSelectionHalo abnormalDeviceStatuses={abnormalDeviceStatuses} selectedDeviceCode={selectedDeviceCode} />
+      <DeviceSelectionHalo abnormalDeviceStatuses={abnormalDeviceStatuses} devices={devices} selectedDeviceCode={selectedDeviceCode} />
       <ContactShadows
         position={[0, 0.012, 0]}
         opacity={0.36}

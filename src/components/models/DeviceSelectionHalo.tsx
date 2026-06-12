@@ -2,12 +2,13 @@ import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import type { Mesh } from 'three'
 
-import { devices, type DeviceCode, type DeviceStatus } from '@/data/workshopDevices'
+import type { DeviceCode, DeviceInfo, DeviceStatus } from '@/data/workshopDevices'
 
 type AbnormalDeviceStatuses = Partial<Record<DeviceCode, Exclude<DeviceStatus, 'normal'>>>
 
 type DeviceSelectionHaloProps = {
   abnormalDeviceStatuses: AbnormalDeviceStatuses
+  devices: DeviceInfo[]
   selectedDeviceCode: DeviceCode | null
 }
 
@@ -145,7 +146,7 @@ function StatusHalo({
   )
 }
 
-export default function DeviceSelectionHalo({ abnormalDeviceStatuses, selectedDeviceCode }: DeviceSelectionHaloProps) {
+export default function DeviceSelectionHalo({ abnormalDeviceStatuses, devices, selectedDeviceCode }: DeviceSelectionHaloProps) {
   const selectedDevice = devices.find((device) => device.code === selectedDeviceCode)
 
   return (
