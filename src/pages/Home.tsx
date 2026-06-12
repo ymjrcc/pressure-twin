@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ComponentRef } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react'
 import { Button } from 'antd'
 import { Canvas } from '@react-three/fiber'
 import { AdaptiveDpr, AdaptiveEvents, OrbitControls, PerspectiveCamera } from '@react-three/drei'
@@ -15,7 +15,8 @@ import WorkshopLegend from '@/components/WorkshopLegend'
 import WorkshopProcessFlow from '@/components/WorkshopProcessFlow'
 import WorkshopScene, { type AbnormalDeviceStatuses } from '@/components/WorkshopScene'
 import type { DeviceTelemetrySnapshot } from '@/data/deviceTelemetry'
-import type { DeviceCode } from '@/data/workshopDevices'
+import type { DeviceCode, InspectionSession } from '@/data/workshopDevices'
+import { submitInspectionReport } from '@/api/inspections'
 import { useDeviceTelemetry } from '@/hooks/useDeviceTelemetry'
 import { useDevices } from '@/hooks/useDevices'
 import { useInspectionChecklists } from '@/hooks/useInspectionChecklists'
@@ -23,6 +24,7 @@ import { useInstruments } from '@/hooks/useInstruments'
 import { useInspectionSession } from '@/hooks/useInspectionSession'
 import { useProcessFlowSteps } from '@/hooks/useProcessFlowSteps'
 import { useTelemetryConfigs } from '@/hooks/useTelemetryConfigs'
+import type { CreateInspectionReportPayload } from '@/types/inspection'
 
 function getAbnormalDeviceStatuses(telemetryByDevice: DeviceTelemetrySnapshot): AbnormalDeviceStatuses {
   return Object.fromEntries(
@@ -30,6 +32,26 @@ function getAbnormalDeviceStatuses(telemetryByDevice: DeviceTelemetrySnapshot): 
       .filter(([, telemetry]) => telemetry.status !== 'normal')
       .map(([deviceCode, telemetry]) => [deviceCode, telemetry.status]),
   ) as AbnormalDeviceStatuses
+}
+
+function buildInspectionReportPayload(session: InspectionSession): CreateInspectionReportPayload {
+  return {
+    completedAt: session.completedAt ?? session.startedAt,
+    records: Object.values(session.records).map((record) => ({
+      checkedAt: record.checkedAt,
+      deviceCode: record.deviceCode,
+      itemResults: Object.entries(record.itemResults).flatMap(([itemId, result]) => (
+        result
+          ? [{
+              itemId,
+              result,
+            }]
+          : []
+      )),
+      note: record.note,
+    })),
+    startedAt: session.startedAt,
+  }
 }
 
 export default function Home() {
@@ -41,6 +63,9 @@ export default function Home() {
   const [isProcessFlowOpen, setIsProcessFlowOpen] = useState(false)
   const [selectedDeviceCode, setSelectedDeviceCode] = useState<DeviceCode | null>(null)
   const [controlInteractionVersion, setControlInteractionVersion] = useState(0)
+  const [isSubmittingInspectionReport, setIsSubmittingInspectionReport] = useState(false)
+  const [inspectionSubmitError, setInspectionSubmitError] = useState<string | null>(null)
+  const [submittedInspectionReportId, setSubmittedInspectionReportId] = useState<number | null>(null)
   const {
     clearAllOverrides,
     clearOverride,
@@ -75,6 +100,34 @@ export default function Home() {
   const abnormalDeviceStatuses = useMemo(() => getAbnormalDeviceStatuses(telemetryByDevice), [telemetryByDevice])
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
   const activeSelectedDeviceCode = currentInspectionDevice?.code ?? selectedDeviceCode
+
+  useEffect(() => {
+    if (inspectionSession?.status === 'completed') {
+      return
+    }
+
+    setIsSubmittingInspectionReport(false)
+    setInspectionSubmitError(null)
+    setSubmittedInspectionReportId(null)
+  }, [inspectionSession])
+
+  const handleSubmitInspectionReport = async () => {
+    if (!inspectionSession || inspectionSession.status !== 'completed' || isSubmittingInspectionReport || submittedInspectionReportId !== null) {
+      return
+    }
+
+    try {
+      setIsSubmittingInspectionReport(true)
+      setInspectionSubmitError(null)
+
+      const result = await submitInspectionReport(buildInspectionReportPayload(inspectionSession))
+      setSubmittedInspectionReportId(result.reportId)
+    } catch (error) {
+      setInspectionSubmitError(error instanceof Error ? error.message : '提交巡检报告失败')
+    } finally {
+      setIsSubmittingInspectionReport(false)
+    }
+  }
 
   const toggleSelectedDevice = (code: DeviceCode) => {
     if (isInspectionRunning) {
@@ -211,9 +264,13 @@ export default function Home() {
             <InspectionReportDialog
               devices={devices}
               inspectionChecklists={inspectionChecklists}
+              isSubmitting={isSubmittingInspectionReport}
+              onSubmit={() => void handleSubmitInspectionReport()}
               session={inspectionSession}
               onClose={closeInspectionReport}
               onRestart={restartInspection}
+              submitError={inspectionSubmitError}
+              submittedReportId={submittedInspectionReportId}
             />,
             document.body,
           )

@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, ClipboardList, RotateCcw, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ClipboardList, RotateCcw, Send, X } from 'lucide-react'
 import { Button } from 'antd'
 import {
   type DeviceCode,
@@ -10,8 +10,12 @@ import {
 type InspectionReportDialogProps = {
   devices: DeviceInfo[]
   inspectionChecklists: Record<DeviceCode, InspectionItem[]>
+  isSubmitting?: boolean
+  onSubmit: () => void
   onClose: () => void
   onRestart: () => void
+  submitError?: string | null
+  submittedReportId?: number | null
   session: InspectionSession
 }
 
@@ -64,11 +68,16 @@ function getDeviceName(devices: DeviceInfo[], deviceCode: DeviceCode) {
 export default function InspectionReportDialog({
   devices,
   inspectionChecklists,
+  isSubmitting = false,
+  onSubmit,
   onClose,
   onRestart,
+  submitError = null,
+  submittedReportId = null,
   session,
 }: InspectionReportDialogProps) {
   const stats = getReportStats(devices, inspectionChecklists, session)
+  const isSubmitted = submittedReportId !== null
 
   return (
     <div className="fixed inset-0 z-[2147483647] grid place-items-center bg-slate-950/38 px-4 py-6 backdrop-blur-[2px]">
@@ -115,6 +124,16 @@ export default function InspectionReportDialog({
             <div>开始：{formatReportTime(session.startedAt)}</div>
             <div>结束：{formatReportTime(session.completedAt)}</div>
           </div>
+          {isSubmitted ? (
+            <div className="mt-3 rounded-[6px] border border-emerald-300/22 bg-emerald-300/12 px-3 py-2 text-xs font-bold text-emerald-100">
+              巡检报告已提交，报告 ID：{submittedReportId}
+            </div>
+          ) : null}
+          {submitError ? (
+            <div className="mt-3 rounded-[6px] border border-rose-300/22 bg-rose-400/12 px-3 py-2 text-xs font-bold text-rose-100">
+              提交失败：{submitError}
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-3 overflow-y-auto px-5 py-4">
@@ -189,8 +208,18 @@ export default function InspectionReportDialog({
           >
             重新巡检
           </Button>
-          <Button className="h-10 rounded-[6px] px-4 py-0 text-sm font-extrabold" onClick={onClose} type="primary">
+          <Button className="h-10 rounded-[6px] px-4 py-0 text-sm font-extrabold" onClick={onClose}>
             关闭报告
+          </Button>
+          <Button
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-[6px] px-4 py-0 text-sm font-extrabold"
+            disabled={isSubmitted}
+            icon={<Send aria-hidden="true" size={16} strokeWidth={2.4} />}
+            loading={isSubmitting}
+            onClick={onSubmit}
+            type="primary"
+          >
+            {isSubmitted ? '已提交' : '提交报告'}
           </Button>
         </div>
       </section>
