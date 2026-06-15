@@ -1,9 +1,26 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, ClipboardList, FileText, RefreshCcw } from 'lucide-react'
+import {
+  AlertTriangle,
+  BrainCircuit,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  RefreshCcw,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldQuestion,
+  Sparkles,
+} from 'lucide-react'
 import { Button } from 'antd'
 
-import { getInspectionReportDetail, listInspectionReports } from '@/api/inspections'
-import type { InspectionReportDetail, InspectionReportListItem } from '@/types/inspection'
+import { getInspectionReportDetail, listInspectionReports, parseInspectionReport } from '@/api/inspections'
+import type {
+  InspectionReportAnalysis,
+  InspectionReportAnalysisRiskLevel,
+  InspectionReportAnalysisStatus,
+  InspectionReportDetail,
+  InspectionReportListItem,
+} from '@/types/inspection'
 
 function formatDateTime(timestamp?: number) {
   if (!timestamp) {
@@ -27,6 +44,242 @@ function DetailField({ label, value }: { label: string; value: string | number }
       <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{label}</div>
       <div className="mt-2 text-sm font-extrabold text-slate-900">{value}</div>
     </div>
+  )
+}
+
+function getOverallStatusMeta(status: InspectionReportAnalysisStatus) {
+  switch (status) {
+    case 'normal':
+      return {
+        description: '本次巡检未识别出明显风险，可继续保持常规巡检节奏。',
+        icon: ShieldCheck,
+        label: '正常',
+        panelClassName: 'border-emerald-200 bg-emerald-50/80',
+        tagClassName: 'bg-emerald-100 text-emerald-700',
+      }
+    case 'critical':
+      return {
+        description: '本次巡检存在高风险信号，建议优先核查异常设备并尽快处理。',
+        icon: ShieldAlert,
+        label: '高风险',
+        panelClassName: 'border-rose-200 bg-rose-50/80',
+        tagClassName: 'bg-rose-100 text-rose-700',
+      }
+    case 'warning':
+    default:
+      return {
+        description: '本次巡检存在需要关注的异常或潜在风险，建议结合原始记录进一步确认。',
+        icon: ShieldQuestion,
+        label: '需关注',
+        panelClassName: 'border-amber-200 bg-amber-50/80',
+        tagClassName: 'bg-amber-100 text-amber-700',
+      }
+  }
+}
+
+function getRiskLevelMeta(level: InspectionReportAnalysisRiskLevel) {
+  switch (level) {
+    case 'low':
+      return {
+        className: 'bg-emerald-100 text-emerald-700',
+        label: '低风险',
+      }
+    case 'high':
+      return {
+        className: 'bg-rose-100 text-rose-700',
+        label: '高风险',
+      }
+    case 'medium':
+    default:
+      return {
+        className: 'bg-amber-100 text-amber-700',
+        label: '中风险',
+      }
+  }
+}
+
+function AnalysisListBlock({
+  emptyText,
+  items,
+  title,
+}: {
+  emptyText: string
+  items: string[]
+  title: string
+}) {
+  return (
+    <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+      <div className="text-sm font-extrabold text-slate-900">{title}</div>
+      {items.length > 0 ? (
+        <div className="mt-3 grid gap-2">
+          {items.map((item, index) => (
+            <div
+              key={`${title}-${index}`}
+              className="rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium leading-6 text-slate-700"
+            >
+              {item}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-3 rounded-[10px] border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-500">
+          {emptyText}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReportAnalysisPanel({
+  analysisError,
+  analysisResult,
+  isAnalysisLoading,
+}: {
+  analysisError: string | null
+  analysisResult: InspectionReportAnalysis | null
+  isAnalysisLoading: boolean
+}) {
+  if (isAnalysisLoading) {
+    return (
+      <section className="rounded-[18px] border border-cyan-200 bg-cyan-50/70 px-5 py-5">
+        <div className="flex items-center gap-3">
+          <BrainCircuit className="text-cyan-600" size={20} strokeWidth={2.3} />
+          <div>
+            <div className="text-sm font-extrabold text-slate-900">AI 正在分析这份巡检报告</div>
+            <div className="mt-1 text-sm font-medium text-slate-600">系统会基于异常项、巡检备注和设备结果生成结构化结论。</div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (analysisError) {
+    return (
+      <section className="rounded-[18px] border border-rose-200 bg-rose-50/80 px-5 py-5">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 text-rose-600" size={20} strokeWidth={2.3} />
+          <div>
+            <div className="text-sm font-extrabold text-rose-700">AI 分析失败</div>
+            <div className="mt-1 text-sm font-medium leading-6 text-rose-700">{analysisError}</div>
+            <div className="mt-2 text-sm font-medium text-rose-600">可以直接重新点击按钮再次发起分析，原始巡检报告内容不受影响。</div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (!analysisResult) {
+    return (
+      <section className="rounded-[18px] border border-dashed border-slate-300 bg-slate-50/80 px-5 py-5">
+        <div className="flex items-start gap-3">
+          <Sparkles className="mt-0.5 text-cyan-600" size={20} strokeWidth={2.3} />
+          <div>
+            <div className="text-sm font-extrabold text-slate-900">AI 智能分析</div>
+            <div className="mt-1 text-sm font-medium leading-6 text-slate-600">
+              点击上方按钮后，系统会基于当前巡检报告生成摘要、总体风险判断、异常设备结论和处理建议。
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  const statusMeta = getOverallStatusMeta(analysisResult.overallStatus)
+  const StatusIcon = statusMeta.icon
+
+  return (
+    <section className="grid gap-4 rounded-[18px] border border-slate-200 bg-[linear-gradient(180deg,_rgba(248,250,252,0.92)_0%,_rgba(255,255,255,1)_100%)] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+      <div className={`rounded-[14px] border px-4 py-4 ${statusMeta.panelClassName}`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <StatusIcon className="mt-0.5 text-current" size={20} strokeWidth={2.3} />
+            <div>
+              <div className="text-xs font-extrabold uppercase tracking-[0.18em] text-slate-500">AI Summary</div>
+              <div className="mt-1 text-lg font-black text-slate-900">{statusMeta.label}</div>
+              <div className="mt-2 text-sm font-medium leading-6 text-slate-700">{statusMeta.description}</div>
+            </div>
+          </div>
+          <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${statusMeta.tagClassName}`}>
+            {statusMeta.label}
+          </span>
+        </div>
+        <div className="mt-4 rounded-[12px] bg-white/80 px-4 py-3 text-sm font-medium leading-6 text-slate-700">
+          {analysisResult.summary}
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <AnalysisListBlock emptyText="未识别出额外全局风险" items={analysisResult.risks} title="全局风险" />
+        <AnalysisListBlock emptyText="暂无额外处理建议" items={analysisResult.recommendations} title="处理建议" />
+      </div>
+
+      <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="text-cyan-700" size={18} strokeWidth={2.3} />
+          <div className="text-sm font-extrabold text-slate-900">异常设备结论</div>
+        </div>
+
+        {analysisResult.abnormalDevices.length > 0 ? (
+          <div className="mt-4 grid gap-3">
+            {analysisResult.abnormalDevices.map((device) => {
+              const riskMeta = getRiskLevelMeta(device.riskLevel)
+
+              return (
+                <section key={`${device.deviceCode}-${device.deviceName}`} className="rounded-[14px] border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-[6px] bg-cyan-100 px-2 py-1 text-xs font-extrabold text-cyan-700">
+                          {device.deviceCode}
+                        </span>
+                        <h3 className="text-base font-extrabold text-slate-900">{device.deviceName}</h3>
+                      </div>
+                      <div className="mt-2 text-sm font-medium text-slate-500">识别到 {device.abnormalItemCount} 项异常或风险信号</div>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${riskMeta.className}`}>{riskMeta.label}</span>
+                  </div>
+
+                  {device.abnormalItems.length > 0 ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {device.abnormalItems.map((item) => (
+                        <span
+                          key={`${device.deviceCode}-${item}`}
+                          className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-[12px] border border-slate-200 bg-white px-3 py-3">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.16em] text-slate-400">问题概述</div>
+                      <div className="mt-2 text-sm font-medium leading-6 text-slate-700">{device.issueSummary}</div>
+                    </div>
+                    <div className="rounded-[12px] border border-slate-200 bg-white px-3 py-3">
+                      <div className="text-xs font-extrabold uppercase tracking-[0.16em] text-slate-400">处理建议</div>
+                      <div className="mt-2 text-sm font-medium leading-6 text-slate-700">{device.recommendation}</div>
+                    </div>
+                  </div>
+
+                  {device.note ? (
+                    <div className="mt-3 rounded-[12px] border border-slate-200 bg-white px-3 py-3 text-sm font-medium leading-6 text-slate-500">
+                      <span className="font-extrabold text-slate-700">原始备注：</span>
+                      {device.note}
+                    </div>
+                  ) : null}
+                </section>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-[12px] border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-500">
+            本次分析未识别出异常设备。
+          </div>
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -81,8 +334,11 @@ export default function Reports() {
   const [selectedReport, setSelectedReport] = useState<InspectionReportDetail | null>(null)
   const [isListLoading, setIsListLoading] = useState(true)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [analysisResult, setAnalysisResult] = useState<InspectionReportAnalysis | null>(null)
 
   const loadReports = async () => {
     try {
@@ -123,8 +379,15 @@ export default function Reports() {
     if (selectedReportId === null) {
       setSelectedReport(null)
       setDetailError(null)
+      setAnalysisError(null)
+      setAnalysisResult(null)
+      setIsAnalysisLoading(false)
       return
     }
+
+    setAnalysisError(null)
+    setAnalysisResult(null)
+    setIsAnalysisLoading(false)
 
     const reportId = selectedReportId
     let cancelled = false
@@ -157,6 +420,25 @@ export default function Reports() {
       cancelled = true
     }
   }, [selectedReportId])
+
+  const handleAnalyzeReport = async () => {
+    if (!selectedReport?.id) {
+      return
+    }
+
+    try {
+      setIsAnalysisLoading(true)
+      setAnalysisError(null)
+
+      const result = await parseInspectionReport(selectedReport.id)
+      setAnalysisResult(result)
+    } catch (error) {
+      setAnalysisError(error instanceof Error ? error.message : 'AI 分析失败，请稍后重试')
+      setAnalysisResult(null)
+    } finally {
+      setIsAnalysisLoading(false)
+    }
+  }
 
   return (
     <div className="h-[calc(100vh-4rem)] overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_32%),linear-gradient(180deg,_#f8fbfd_0%,_#eef4f8_100%)] px-6 py-6 md:px-8">
@@ -248,12 +530,22 @@ export default function Reports() {
                     提交时间：{formatDateTime(selectedReport.submittedAt)}
                   </div>
                 </div>
-                <div
-                  className={`rounded-full px-3 py-1.5 text-sm font-extrabold ${
-                    selectedReport.abnormalItemCount > 0 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
-                  }`}
-                >
-                  {selectedReport.abnormalItemCount > 0 ? `${selectedReport.abnormalItemCount} 项异常待关注` : '本次巡检全部正常'}
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <Button
+                    className="h-10 rounded-[10px] border-cyan-200 bg-cyan-50 px-4 text-sm font-extrabold text-cyan-700 shadow-none hover:!border-cyan-300 hover:!bg-cyan-100 hover:!text-cyan-800"
+                    icon={<BrainCircuit size={16} strokeWidth={2.3} />}
+                    loading={isAnalysisLoading}
+                    onClick={() => void handleAnalyzeReport()}
+                  >
+                    {isAnalysisLoading ? '分析中...' : analysisResult ? '重新分析' : 'AI 智能分析'}
+                  </Button>
+                  <div
+                    className={`rounded-full px-3 py-1.5 text-sm font-extrabold ${
+                      selectedReport.abnormalItemCount > 0 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {selectedReport.abnormalItemCount > 0 ? `${selectedReport.abnormalItemCount} 项异常待关注` : '本次巡检全部正常'}
+                  </div>
                 </div>
               </div>
 
@@ -265,6 +557,12 @@ export default function Reports() {
                 <DetailField label="正常项" value={selectedReport.normalItemCount} />
                 <DetailField label="异常项" value={selectedReport.abnormalItemCount} />
               </div>
+
+              <ReportAnalysisPanel
+                analysisError={analysisError}
+                analysisResult={analysisResult}
+                isAnalysisLoading={isAnalysisLoading}
+              />
 
               <div className="grid gap-4">
                 {selectedReport.deviceRecords.map((deviceRecord) => (

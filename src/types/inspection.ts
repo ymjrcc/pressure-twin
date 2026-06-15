@@ -52,3 +52,26 @@ export type InspectionReportDeviceDetail = {
 export type InspectionReportDetail = InspectionReportListItem & {
   deviceRecords: InspectionReportDeviceDetail[]
 }
+
+export type InspectionReportAnalysisStatus = 'normal' | 'warning' | 'critical'
+
+export type InspectionReportAnalysisRiskLevel = 'low' | 'medium' | 'high'
+
+export type InspectionReportAnalysisDevice = {
+  abnormalItemCount: number
+  abnormalItems: string[]
+  deviceCode: string
+  deviceName: string
+  issueSummary: string
+  note: string
+  recommendation: string
+  riskLevel: InspectionReportAnalysisRiskLevel
+}
+
+export type InspectionReportAnalysis = {
+  abnormalDevices: InspectionReportAnalysisDevice[]
+  overallStatus: InspectionReportAnalysisStatus
+  recommendations: string[]
+  risks: string[]
+  summary: string
+}
