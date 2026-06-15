@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber'
 import { AdaptiveDpr, AdaptiveEvents, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { ClipboardCheck, SlidersHorizontal, Workflow, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 
 import CameraFocusController from '@/components/CameraFocusController'
 import DeviceDetailCard from '@/components/DeviceDetailCard'
@@ -55,6 +56,7 @@ function buildInspectionReportPayload(session: InspectionSession): CreateInspect
 }
 
 export default function Home() {
+  const navigate = useNavigate()
   const { devices, error, loading } = useDevices()
   const { inspectionChecklists, error: inspectionChecklistsError, loading: inspectionChecklistsLoading } = useInspectionChecklists()
   const { instruments, error: instrumentsError, loading: instrumentsLoading } = useInstruments()
@@ -122,6 +124,7 @@ export default function Home() {
 
       const result = await submitInspectionReport(buildInspectionReportPayload(inspectionSession))
       setSubmittedInspectionReportId(result.reportId)
+      navigate('/reports')
     } catch (error) {
       setInspectionSubmitError(error instanceof Error ? error.message : '提交巡检报告失败')
     } finally {

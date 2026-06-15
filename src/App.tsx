@@ -1,6 +1,7 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Reports from './pages/Reports'
+import ReportDetail from './pages/ReportDetail'
 import Contact from './pages/Contact'
 
 // 判断路径是否匹配菜单项（支持子路由匹配）
@@ -58,6 +59,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/reports/:reportId" element={<ReportDetail />} />
           <Route path="/contact" element={<Contact />} />
         </Routes>
       </main>
