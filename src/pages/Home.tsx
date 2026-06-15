@@ -138,8 +138,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative h-[100vh] min-h-[620px] overflow-hidden bg-[#eef2f5]">
-      <div className='text-2xl font-bold text-gray-600 py-4 px-8 position left-0 top-0 w-full'>承压类特种设备数字孪生监测与巡检系统</div>
+    <div className="relative h-[calc(100vh-4rem)] min-h-[620px] overflow-hidden bg-[#eef2f5]">
       <Canvas
         shadows
         dpr={[1, 2]}

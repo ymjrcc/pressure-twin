@@ -1,6 +1,6 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
-import About from './pages/About'
+import Reports from './pages/Reports'
 import Contact from './pages/Contact'
 
 // 判断路径是否匹配菜单项（支持子路由匹配）
@@ -15,7 +15,7 @@ function isActive(pathname: string, menuPath: string): boolean {
 
 const menuItems = [
   { path: '/', label: '首页' },
-  { path: '/about', label: '关于我们' },
+  { path: '/reports', label: '巡检报告' },
   { path: '/contact', label: '联系我们' },
 ]
 
@@ -23,8 +23,8 @@ function App() {
   const location = useLocation()
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm hidden">
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50">
+      <nav className="shrink-0 bg-white shadow-sm">
         <div className="px-4">
           <div className="flex justify-between h-16">
             <div className="flex">
@@ -54,10 +54,10 @@ function App() {
         </div>
       </nav>
 
-      <main>
+      <main className="min-h-0 flex-1 overflow-y-auto">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/contact" element={<Contact />} />
         </Routes>
       </main>
