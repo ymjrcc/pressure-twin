@@ -31,12 +31,63 @@ export function formatDateTime(timestamp?: number) {
   }).format(timestamp)
 }
 
-function DetailField({ label, value }: { label: string; value: string | number }) {
+function formatPercent(value: number, total: number) {
+  if (total <= 0) {
+    return '0%'
+  }
+
+  return `${Math.round((value / total) * 100)}%`
+}
+
+function ReportSummaryStats({ report }: { report: InspectionReportDetail }) {
+  const totalItemCount = report.normalItemCount + report.abnormalItemCount
+  const normalWidth = totalItemCount > 0 ? `${(report.normalItemCount / totalItemCount) * 100}%` : '0%'
+  const abnormalWidth = totalItemCount > 0 ? `${(report.abnormalItemCount / totalItemCount) * 100}%` : '0%'
+
   return (
-    <div className="rounded-[8px] border border-slate-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</div>
-      <div className="mt-2 text-sm font-semibold text-slate-900">{value}</div>
-    </div>
+    <section className="rounded-[10px] border border-slate-200 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">报告总览</div>
+          <div className="mt-2 flex items-end gap-2">
+            <div className="text-3xl font-semibold leading-none text-slate-900">{report.deviceCount}</div>
+            <div className="pb-0.5 text-sm font-medium text-slate-500">台设备</div>
+          </div>
+        </div>
+        <div className="text-right text-xs leading-5 text-slate-500">
+          <div>总检查项：{totalItemCount}</div>
+          <div>异常设备：{report.abnormalItemCount > 0 ? '存在异常项' : '未发现异常项'}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-[8px] border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-semibold text-emerald-900">正常项</div>
+            <div className="text-sm font-semibold text-emerald-700">
+              {report.normalItemCount} / {totalItemCount}
+            </div>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-emerald-100">
+            <div className="h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: normalWidth }} />
+          </div>
+          <div className="mt-2 text-xs text-emerald-700">占比 {formatPercent(report.normalItemCount, totalItemCount)}</div>
+        </div>
+
+        <div className="rounded-[8px] border border-rose-200 bg-rose-50 px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-semibold text-rose-900">异常项</div>
+            <div className="text-sm font-semibold text-rose-700">
+              {report.abnormalItemCount} / {totalItemCount}
+            </div>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-rose-100">
+            <div className="h-full rounded-full bg-rose-500 transition-[width]" style={{ width: abnormalWidth }} />
+          </div>
+          <div className="mt-2 text-xs text-rose-700">占比 {formatPercent(report.abnormalItemCount, totalItemCount)}</div>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -131,14 +182,7 @@ export function ReportDataPanel({ report }: { report: InspectionReportDetail }) 
         巡检报告详情
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <DetailField label="开始时间" value={formatDateTime(report.startedAt)} />
-        <DetailField label="结束时间" value={formatDateTime(report.completedAt)} />
-        <DetailField label="提交时间" value={formatDateTime(report.submittedAt)} />
-        <DetailField label="设备数" value={report.deviceCount} />
-        <DetailField label="正常项" value={report.normalItemCount} />
-        <DetailField label="异常项" value={report.abnormalItemCount} />
-      </div>
+      <ReportSummaryStats report={report} />
 
       <div className="grid gap-4">
         {report.deviceRecords.map((deviceRecord) => (

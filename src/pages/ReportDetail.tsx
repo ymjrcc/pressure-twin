@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, FileText } from 'lucide-react'
+import { Breadcrumb } from 'antd'
+import { FileText } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 
 import { getInspectionReportDetail, parseInspectionReport } from '@/api/inspections'
@@ -92,40 +93,47 @@ export default function ReportDetail() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-slate-100 px-6 py-6 md:px-8">
-      <div className="mx-auto flex h-full max-w-[1480px] flex-col">
-        <div className="mb-4">
-          <Link
-            className="inline-flex items-center gap-2 rounded-[6px] border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-            to="/reports"
-          >
-            <ArrowLeft size={15} strokeWidth={2.2} />
-            返回列表
-          </Link>
+    <div className="h-[calc(100vh-6rem)] overflow-hidden bg-slate-100 px-6 py-4 md:px-8">
+      <div className="mx-auto flex h-full max-w-[1920px] flex-col">
+        <div className="mb-3 shrink-0">
+          <Breadcrumb
+            items={[
+              {
+                title: <Link to="/reports">报告列表</Link>,
+              },
+              {
+                title: `报告 #${Number.isInteger(reportId) && reportId > 0 ? reportId : '--'}`,
+              },
+            ]}
+          />
         </div>
 
         {isDetailLoading ? (
-          <section className="grid min-h-[420px] place-items-center rounded-[10px] border border-slate-200 bg-white text-sm text-slate-500 shadow-sm">
+          <section className="grid min-h-0 flex-1 place-items-center rounded-[10px] border border-slate-200 bg-white text-sm text-slate-500 shadow-sm">
             正在加载巡检报告详情...
           </section>
         ) : null}
 
         {!isDetailLoading && detailError ? (
-          <section className="grid min-h-[420px] place-items-center rounded-[10px] border border-rose-200 bg-white px-6 text-center shadow-sm">
+          <section className="grid min-h-0 flex-1 place-items-center rounded-[10px] border border-rose-200 bg-white px-6 text-center shadow-sm">
             <div className="text-sm text-rose-700">详情加载失败：{detailError}</div>
           </section>
         ) : null}
 
         {report && !isDetailLoading && !detailError ? (
           <section className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-200 px-5 pt-4 text-sm text-slate-500">
-              <h2 className="text-lg my-0 font-semibold text-slate-900">巡检报告 #{report.id}</h2>
-              <ReportStatusTag abnormalItemCount={report.abnormalItemCount} />
-              <span>提交时间：{formatDateTime(report.submittedAt)}</span>
-              <span>巡检结束：{formatDateTime(report.completedAt)}</span>
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-5 pt-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
+                <h2 className="my-0 text-lg font-semibold text-slate-900">巡检报告 #{report.id}</h2>
+                <ReportStatusTag abnormalItemCount={report.abnormalItemCount} />
+              </div>
+              <div className="shrink-0 text-right text-xs leading-5 text-slate-500">
+                <div>巡检时间：{formatDateTime(report.startedAt)} - {formatDateTime(report.completedAt)}</div>
+                <div>报告提交时间：{formatDateTime(report.submittedAt)}</div>
+              </div>
             </div>
 
-            <div className="grid min-h-0 flex-1 gap-0 p-4 xl:grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)]">
+            <div className="grid min-h-0 flex-1 gap-0 overflow-hidden p-4 xl:grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)]">
               <div className="min-w-0 overflow-y-auto rounded-[8px] border border-slate-200 bg-slate-50 p-4 pr-3">
                 <ReportDataPanel report={report} />
               </div>
@@ -134,7 +142,7 @@ export default function ReportDetail() {
                 <div className="w-px bg-slate-200" />
               </div>
 
-              <div className="min-w-0 overflow-y-auto rounded-[8px] border border-slate-200 bg-slate-50 p-4 pr-3 mt-5 xl:mt-0">
+              <div className="mt-5 min-w-0 overflow-y-auto rounded-[8px] border border-slate-200 bg-slate-50 p-4 pr-3 xl:mt-0">
                 <ReportAnalysisPanel
                   analysisError={analysisError}
                   analysisResult={analysisResult}
@@ -148,7 +156,7 @@ export default function ReportDetail() {
         ) : null}
 
         {!report && !isDetailLoading && !detailError ? (
-          <section className="grid min-h-[420px] place-items-center rounded-[10px] border border-slate-200 bg-white px-6 text-center shadow-sm">
+          <section className="grid min-h-0 flex-1 place-items-center rounded-[10px] border border-slate-200 bg-white px-6 text-center shadow-sm">
             <div>
               <FileText className="mx-auto text-slate-400" size={32} strokeWidth={2.1} />
               <div className="mt-4 text-base font-medium text-slate-700">未找到可展示的巡检报告</div>

@@ -108,11 +108,11 @@ export default function Reports() {
 
   return (
     <div className="min-h-full bg-slate-100 px-6 py-6 md:px-8">
-      <div className="mx-auto max-w-[1480px]">
+      <div className="mx-auto max-w-[1920px]">
         <section className="rounded-[10px] border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-5 pt-4">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">巡检报告</h2>
+              <h2 className="text-xl font-semibold text-slate-900 my-0">巡检报告</h2>
               <div className="mt-1 text-sm text-slate-500">共 {reports.length} 条报告记录</div>
             </div>
             <Button
