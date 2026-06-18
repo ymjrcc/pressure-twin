@@ -2,7 +2,7 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Reports from './pages/Reports'
 import ReportDetail from './pages/ReportDetail'
-import Contact from './pages/Contact'
+import KnowledgeBase from './pages/KnowledgeBase'
 
 // 判断路径是否匹配菜单项（支持子路由匹配）
 function isActive(pathname: string, menuPath: string): boolean {
@@ -17,7 +17,7 @@ function isActive(pathname: string, menuPath: string): boolean {
 const menuItems = [
   { path: '/', label: '首页' },
   { path: '/reports', label: '巡检报告' },
-  { path: '/contact', label: '联系我们' },
+  { path: '/knowledge', label: '知识库' },
 ]
 
 function App() {
@@ -60,7 +60,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/reports/:reportId" element={<ReportDetail />} />
-          <Route path="/contact" element={<Contact />} />
+          <Route path="/knowledge" element={<KnowledgeBase />} />
         </Routes>
       </main>
     </div>
